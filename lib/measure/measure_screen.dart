@@ -169,7 +169,7 @@ class _MeasureScreenState extends State<MeasureScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open share: $e')),
+        SnackBar(content: Text('Could not share: ${shareErrorMessage(e)}')),
       );
     }
   }

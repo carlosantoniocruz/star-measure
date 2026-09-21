@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:ar_measure/measure/recording.dart';
 import 'package:ar_measure/measure/recording_store.dart';
+import 'package:ar_measure/measure/share_recording.dart';
 import 'package:ar_measure/measure/units.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -107,6 +108,46 @@ void main() {
       expect(store.items, isEmpty);
       expect(File('${file.path}.corrupt').existsSync(), isTrue);
       expect(File('${file.path}.corrupt').readAsStringSync(), '{ not json');
+    });
+  });
+
+  group('sharing', () {
+    test('export files are never written into share_plus\'s own cache folder', () {
+      // share_plus wipes <cache>/share_plus before every share and throws if the
+      // file is inside it, which broke sharing on a real device.
+      final dir = exportDirPath('/data/user/0/app/cache');
+      expect(dir, isNot(contains('share_plus')));
+      expect(dir, startsWith('/data/user/0/app/cache/'));
+    });
+
+    test('summary lists the total and every segment', () {
+      final text = recordingSummary(sample(), UnitSystem.metric);
+      expect(text, startsWith('Star Measure: 17.00 m'));
+      expect(text, contains('3 points, 2 segments'));
+      expect(text, contains('1. 5.00 m'));
+      expect(text, contains('2. 12.00 m'));
+    });
+
+    test('summary respects the unit system', () {
+      expect(recordingSummary(sample(), UnitSystem.imperial), contains('1. 16′ 5″'));
+    });
+
+    test('summary truncates long recordings and points at the file', () {
+      final many = Recording(
+        id: 'm',
+        createdAt: DateTime(2026, 1, 1),
+        points: [for (var i = 0; i < 30; i++) Vec3(i.toDouble(), 0, 0)],
+      );
+      final text = recordingSummary(many, UnitSystem.metric, maxSegments: 5);
+      expect(text, contains('5. 1.00 m'));
+      expect(text, isNot(contains('6. ')));
+      expect(text, endsWith('+ 24 more in the attached file'));
+    });
+
+    test('error messages are one short line', () {
+      final long = 'Share failed\n at dev.example.Foo.bar(Foo.kt:1)';
+      expect(shareErrorMessage(Exception(long)), isNot(contains('\n')));
+      expect(shareErrorMessage(Exception('x' * 500)).length, lessThanOrEqualTo(120));
     });
   });
 }
