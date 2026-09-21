@@ -1,9 +1,11 @@
 # Star Measure
 
+<p align="center"><img src="docs/logo.png" width="160" alt="Star Measure logo: a ring of amber diamond petals around a green planet"></p>
+
 An augmented-reality tape measure for Android, built with Flutter and ARCore.
 Point the camera at a surface, tap to drop points, and read off the distances.
-Measurements can be saved on the device and exported as CSV or JSON through the
-Android share sheet.
+Measurements can be saved on the device, browsed in a history, and exported as
+CSV or JSON through the Android share sheet, or copied as text.
 
 The look is a minimal night sky: a ring of diamonds you connect to get in, a
 flat logo, hairline measuring lines, and small diamonds for points. It is
@@ -28,14 +30,16 @@ goes straight to measuring.
 4. **Hold** the button once you have two or more points to stop and save the
    measurement. The screen clears, ready for the next one.
 
+The bottom row, left to right:
+
 | Control | Action |
 | --- | --- |
+| History | Open the history of saved measurements (count badge) |
+| Undo | Remove the last point |
 | Diamond button, tap | Place a point at the reticle |
 | Diamond button, hold (0.8 s) | Save the measurement and start fresh |
-| Undo (bottom left) | Remove the last point |
-| Close (bottom right) | Clear all points without saving |
-| List (top left) | Saved measurements, with a count badge |
-| M / FT (top right) | Metric or imperial display |
+| Close | Clear all points without saving |
+| M / FT | Metric or imperial display |
 
 Up to 24 points per measurement. Portrait only.
 
@@ -45,9 +49,35 @@ Saved measurements are stored on the device (`recordings.json` in the app's
 private storage) and survive restarts. If that file is ever unreadable it is
 renamed to `recordings.json.corrupt` rather than overwritten.
 
-Open the saved list to share or delete a measurement. Sharing writes a file and
-hands it to the Android share sheet, so it can go to Drive, email, chat, or any
-other app that accepts files.
+### History
+
+The history button opens every saved measurement, newest first. Scroll down to
+go further back; each row shows the total, the point count, the time, and a
+small sketch of its shape. The back arrow returns to measuring.
+
+- **Tap** a row to see every segment and share or copy it.
+- **Long-press** a row, or choose **Select** from the menu, to select several.
+  Tap rows to add or remove them, or use **Select all**. The bin deletes the
+  selection. Back cancels selection first.
+- **Delete all** is in the menu. Every delete asks for confirmation first.
+
+### Sharing and copying
+
+Each measurement has three actions, in the save sheet, the detail sheet, and the
+share menu on each history row:
+
+- **Share CSV** and **Share JSON** write a file and hand it to the Android share
+  sheet, so it can go to Drive, email, chat, or any other app that accepts files.
+  The share also carries the total and every segment length as plain text, for
+  apps that ignore attachments.
+- **Copy text** puts that plain-text summary on the clipboard:
+
+  ```
+  Star Measure: 17.00 m
+  3 points, 2 segments · Sep 21, 16:40
+  1. 5.00 m
+  2. 12.00 m
+  ```
 
 **CSV** has one row per segment and a final total row:
 
@@ -104,6 +134,14 @@ flutter analyze
 flutter test
 ```
 
+The launcher icon (adaptive, with a themed monochrome layer, plus legacy icons
+and `docs/logo.png`) is rendered from the same painter as the in-app logo.
+After changing `lib/intro/logo_painter.dart`, regenerate it with:
+
+```sh
+flutter test tool/generate_icons.dart
+```
+
 ## How it works
 
 ARCore runs natively in Kotlin. Flutter draws every pixel of UI. They talk over
@@ -120,7 +158,8 @@ Kotlin (android/app/src/main/kotlin/com/example/ar_measure/)
 Dart (lib/)
   intro/                connect-the-diamonds gate, starfield, logo
   measure/              AR screen, constellation painter, units, recordings,
-                        storage, and sharing
+                        storage, sharing, the history screen and detail sheet
+tool/generate_icons.dart  renders the launcher icon from the in-app logo
 ```
 
 Each camera frame the native side sends one flat `DoubleArray`. Anchor
@@ -147,13 +186,18 @@ draw above it.
 
 ## Testing
 
-`flutter test` runs 24 tests:
+`flutter test` runs 49 tests:
 
 - unit formatting (metric and imperial)
 - decoding the native frame payload, including truncated payloads
-- segment and total maths, CSV and JSON export, CSV escaping
-- the recording store: persistence, ordering, removal, change notifications,
-  and a corrupt save file
+- segment and total maths, CSV and JSON export, CSV escaping, the plain-text
+  summary, and the folder exports are written to
+- the recording store: persistence, ordering, removing some or all, change
+  notifications, and a corrupt save file
+- the history thumbnails (how a 3D measurement is flattened)
+- the history screen: newest-first order, the empty state, back, selection,
+  select all, delete with confirmation (and cancelling), delete all, system back
+  leaving selection first, opening a row, and Copy text reaching the clipboard
 - the intro: connecting all twelve diamonds, hold to launch, an early release
   that must not launch, and skip
 

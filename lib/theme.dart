@@ -13,6 +13,9 @@ abstract final class Sky {
   static const bunDeep = Color(0xFF9A5426);
   static const icing = Color(0xFFFFF1D0);
 
+  /// Destructive actions (delete).
+  static const alert = Color(0xFFFF8A80);
+
   static ThemeData theme() {
     final scheme = ColorScheme.fromSeed(
       seedColor: planet,

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
-import 'package:flutter/services.dart' show PlatformException;
+import 'package:flutter/services.dart' show Clipboard, ClipboardData, PlatformException;
 import 'package:share_plus/share_plus.dart';
 
 import 'ar_channel.dart';
@@ -17,6 +17,24 @@ enum ExportFormat {
   final String extension, mimeType;
   String get label => extension.toUpperCase();
 }
+
+/// Everything you can do with a recording from a share menu.
+enum ShareChoice {
+  csv('Share CSV', ExportFormat.csv),
+  json('Share JSON', ExportFormat.json),
+  copyText('Copy text', null);
+
+  const ShareChoice(this.label, this.format);
+
+  final String label;
+
+  /// The file format to share, or null for choices that don't produce a file.
+  final ExportFormat? format;
+}
+
+/// Puts the plain-text summary (total and every segment) on the clipboard.
+Future<void> copyRecordingText(Recording r, UnitSystem units) =>
+    Clipboard.setData(ClipboardData(text: recordingSummary(r, units)));
 
 /// Where export files are written before sharing.
 ///

@@ -102,6 +102,33 @@ void main() {
       expect(calls, 2);
     });
 
+    test('removeMany deletes only the given ids and persists', () async {
+      final store = await RecordingStore.openAt(file);
+      for (final id in ['a', 'b', 'c', 'd']) {
+        await store.add(Recording(id: id, createdAt: DateTime(2026, 1, 1), points: const [Vec3(0, 0, 0), Vec3(1, 0, 0)]));
+      }
+      await store.removeMany({'b', 'd', 'nope'});
+      expect(store.items.map((r) => r.id), ['c', 'a']);
+      expect((await RecordingStore.openAt(file)).items.map((r) => r.id), ['c', 'a']);
+    });
+
+    test('removeMany with nothing to remove does not notify', () async {
+      final store = await RecordingStore.openAt(file);
+      await store.add(sample());
+      var calls = 0;
+      store.addListener(() => calls++);
+      await store.removeMany({'missing'});
+      expect(calls, 0);
+    });
+
+    test('clear empties the store and the file', () async {
+      final store = await RecordingStore.openAt(file);
+      await store.add(sample());
+      await store.clear();
+      expect(store.items, isEmpty);
+      expect((await RecordingStore.openAt(file)).items, isEmpty);
+    });
+
     test('keeps an unreadable file aside instead of overwriting it', () async {
       file.writeAsStringSync('{ not json');
       final store = await RecordingStore.openAt(file);

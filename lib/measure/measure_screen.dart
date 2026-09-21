@@ -8,14 +8,16 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../common/caption.dart';
 import '../common/diamond.dart';
 import '../theme.dart';
 import 'ar_channel.dart';
 import 'ar_frame.dart';
 import 'constellation_painter.dart';
+import 'history_screen.dart';
 import 'recording.dart';
+import 'recording_sheet.dart';
 import 'recording_store.dart';
-import 'share_recording.dart';
 import 'units.dart';
 
 class MeasureScreen extends StatefulWidget {
@@ -163,49 +165,29 @@ class _MeasureScreenState extends State<MeasureScreen>
     await _showSaved(recording);
   }
 
-  Future<void> _share(Recording r, ExportFormat format) async {
-    try {
-      await shareRecording(r, _units, format);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not share: ${shareErrorMessage(e)}')),
-      );
-    }
-  }
-
   Future<void> _showSaved(Recording r) {
     return showModalBottomSheet<void>(
       context: context,
       backgroundColor: Sky.space,
       showDragHandle: true,
-      builder: (context) => _SavedSheet(
+      isScrollControlled: true,
+      builder: (sheetContext) => RecordingSheet(
+        title: 'SAVED',
         recording: r,
         units: _units,
-        onShare: (format) {
-          Navigator.pop(context);
-          _share(r, format);
+        onChoice: (choice) {
+          Navigator.pop(sheetContext);
+          performShareChoice(context, r, _units, choice);
         },
       ),
     );
   }
 
-  Future<void> _showRecordings() {
+  Future<void> _showHistory() {
     final store = _store;
     if (store == null) return Future.value();
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Sky.space,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => _RecordingsSheet(
-        store: store,
-        units: _units,
-        onShare: (r, format) {
-          Navigator.pop(context);
-          _share(r, format);
-        },
-      ),
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => HistoryScreen(store: store, units: _units)),
     );
   }
 
@@ -218,7 +200,7 @@ class _MeasureScreenState extends State<MeasureScreen>
           ? _ProblemView(problem: problem)
           : _running
               ? _buildAr()
-              : const Center(child: _Caption('WAKING THE CAMERA')),
+              : const Center(child: Caption('WAKING THE CAMERA')),
     );
   }
 
@@ -246,26 +228,9 @@ class _MeasureScreenState extends State<MeasureScreen>
         ),
         SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
+            padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
             child: Column(
               children: [
-                Row(
-                  children: [
-                    ListenableBuilder(
-                      listenable: _store ?? _time,
-                      builder: (context, _) => _IconAction(
-                        icon: Icons.format_list_bulleted_rounded,
-                        tooltip: 'Saved measurements',
-                        badge: _store?.items.length ?? 0,
-                        onTap: _store == null ? null : _showRecordings,
-                      ),
-                    ),
-                    const Spacer(),
-                    _UnitToggle(value: _units, onChanged: (u) => setState(() => _units = u)),
-                    const SizedBox(width: 4),
-                  ],
-                ),
-                const SizedBox(height: 10),
                 ValueListenableBuilder<ArFrame>(
                   valueListenable: _frame,
                   builder: (context, f, _) => Column(
@@ -291,13 +256,29 @@ class _MeasureScreenState extends State<MeasureScreen>
                   valueListenable: _frame,
                   builder: (context, f, _) {
                     final hasPoints = f.points.isNotEmpty;
+                    // Two items each side of the main button keeps it centred.
                     return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _IconAction(
-                          icon: Icons.undo_rounded,
-                          tooltip: 'Undo last point',
-                          onTap: hasPoints ? ArChannel.undo : null,
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              ListenableBuilder(
+                                listenable: _store ?? _time,
+                                builder: (context, _) => _IconAction(
+                                  icon: Icons.history_rounded,
+                                  tooltip: 'History',
+                                  badge: _store?.items.length ?? 0,
+                                  onTap: _store == null ? null : _showHistory,
+                                ),
+                              ),
+                              _IconAction(
+                                icon: Icons.undo_rounded,
+                                tooltip: 'Undo last point',
+                                onTap: hasPoints ? ArChannel.undo : null,
+                              ),
+                            ],
+                          ),
                         ),
                         _AddButton(
                           enabled: f.reticle != null,
@@ -305,10 +286,18 @@ class _MeasureScreenState extends State<MeasureScreen>
                           onAdd: _addPoint,
                           onRecord: _record,
                         ),
-                        _IconAction(
-                          icon: Icons.close_rounded,
-                          tooltip: 'Clear all points',
-                          onTap: hasPoints ? ArChannel.clear : null,
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _IconAction(
+                                icon: Icons.close_rounded,
+                                tooltip: 'Clear all points',
+                                onTap: hasPoints ? ArChannel.clear : null,
+                              ),
+                              _UnitToggle(value: _units, onChanged: (u) => setState(() => _units = u)),
+                            ],
+                          ),
                         ),
                       ],
                     );
@@ -373,18 +362,6 @@ class _ArView extends StatelessWidget {
   }
 }
 
-class _Caption extends StatelessWidget {
-  const _Caption(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(
-        text,
-        style: const TextStyle(color: Sky.dust, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 3),
-      );
-}
-
 /// One quiet line of guidance; no chip, no border.
 class _Hint extends StatelessWidget {
   const _Hint({required this.text});
@@ -423,7 +400,7 @@ class _UnitToggle extends StatelessWidget {
         onTap: () => onChanged(u),
         behavior: HitTestBehavior.opaque,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 16),
           child: Text(
             label,
             style: TextStyle(
@@ -470,7 +447,7 @@ class _IconAction extends StatelessWidget {
               Icon(icon, color: Sky.star.withValues(alpha: enabled ? 0.9 : 0.3), size: 24),
               if (badge > 0)
                 Positioned(
-                  right: 6,
+                  right: 4,
                   top: 6,
                   child: Text(
                     '$badge',
@@ -593,136 +570,6 @@ class _AddButtonPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_AddButtonPainter old) => old.lit != lit || old.charge != charge;
-}
-
-/// Shown right after a long-press save.
-class _SavedSheet extends StatelessWidget {
-  const _SavedSheet({required this.recording, required this.units, required this.onShare});
-
-  final Recording recording;
-  final UnitSystem units;
-  final ValueChanged<ExportFormat> onShare;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const _Caption('SAVED'),
-            const SizedBox(height: 10),
-            Text(
-              formatLength(recording.total, units),
-              style: const TextStyle(color: Sky.star, fontSize: 44, fontWeight: FontWeight.w200),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${recording.points.length} points · ${recording.segments.length} segments',
-              style: const TextStyle(color: Sky.dust, fontSize: 13),
-            ),
-            const SizedBox(height: 22),
-            Row(
-              children: [
-                for (final format in ExportFormat.values) ...[
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => onShare(format),
-                      icon: const Icon(Icons.ios_share_rounded, size: 18),
-                      label: Text('Share ${format.label}'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Sky.star,
-                        side: BorderSide(color: Sky.star.withValues(alpha: 0.3)),
-                      ),
-                    ),
-                  ),
-                  if (format != ExportFormat.values.last) const SizedBox(width: 12),
-                ],
-              ],
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: Sky.dust),
-              child: const Text('Done'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RecordingsSheet extends StatelessWidget {
-  const _RecordingsSheet({required this.store, required this.units, required this.onShare});
-
-  final RecordingStore store;
-  final UnitSystem units;
-  final void Function(Recording, ExportFormat) onShare;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.7),
-        child: ListenableBuilder(
-          listenable: store,
-          builder: (context, _) {
-            final items = store.items;
-            if (items.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.fromLTRB(32, 8, 32, 40),
-                child: Text(
-                  'Nothing saved yet.\nPlace two or more points, then hold the diamond to save.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Sky.dust, fontSize: 14, height: 1.5),
-                ),
-              );
-            }
-            return ListView.separated(
-              shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
-              itemCount: items.length,
-              separatorBuilder: (_, _) => Divider(height: 1, color: Sky.star.withValues(alpha: 0.08)),
-              itemBuilder: (context, i) {
-                final r = items[i];
-                return ListTile(
-                  title: Text(
-                    formatLength(r.total, units),
-                    style: const TextStyle(color: Sky.star, fontSize: 20, fontWeight: FontWeight.w300),
-                  ),
-                  subtitle: Text(
-                    '${r.points.length} points · ${formatStamp(r.createdAt)}',
-                    style: const TextStyle(color: Sky.dust, fontSize: 12),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      PopupMenuButton<ExportFormat>(
-                        tooltip: 'Share',
-                        icon: const Icon(Icons.ios_share_rounded, color: Sky.star, size: 22),
-                        color: const Color(0xFF12141C),
-                        onSelected: (format) => onShare(r, format),
-                        itemBuilder: (_) => [
-                          for (final format in ExportFormat.values)
-                            PopupMenuItem(value: format, child: Text('Share ${format.label}')),
-                        ],
-                      ),
-                      IconButton(
-                        tooltip: 'Delete',
-                        icon: Icon(Icons.delete_outline_rounded, color: Sky.star.withValues(alpha: 0.6), size: 22),
-                        onPressed: () => store.remove(r.id),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      ),
-    );
-  }
 }
 
 class _ProblemView extends StatelessWidget {
