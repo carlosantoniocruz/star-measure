@@ -1,17 +1,187 @@
-# ar_measure
+# Star Measure
 
-A new Flutter project.
+An augmented-reality tape measure for Android, built with Flutter and ARCore.
+Point the camera at a surface, tap to drop points, and read off the distances.
+Measurements can be saved on the device and exported as CSV or JSON through the
+Android share sheet.
 
-## Getting Started
+The look is a minimal night sky: a ring of diamonds you connect to get in, a
+flat logo, hairline measuring lines, and small diamonds for points. It is
+inspired by the connect-the-dots easter egg in Android 17. It is an
+independent project and is not affiliated with Google or Android.
 
-This project is a starting point for a Flutter application.
+## Using it
 
-A few resources to get you started if this is your first Flutter project:
+**Getting in.** Drag a finger through the twelve diamonds to connect them. The
+logo appears; hold it until the ring fills to launch. **Skip** in the corner
+goes straight to measuring.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+**Measuring.**
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1. Allow camera access. If the phone lacks Google Play Services for AR, the app
+   offers to install it.
+2. Move the phone slowly so ARCore can find surfaces. The four diamonds around
+   the screen centre turn green when they are on a surface.
+3. **Tap** the large diamond button to place a point. Each new point adds a
+   segment with its length, and a dashed line shows the live distance from the
+   last point to the reticle.
+4. **Hold** the button once you have two or more points to stop and save the
+   measurement. The screen clears, ready for the next one.
+
+| Control | Action |
+| --- | --- |
+| Diamond button, tap | Place a point at the reticle |
+| Diamond button, hold (0.8 s) | Save the measurement and start fresh |
+| Undo (bottom left) | Remove the last point |
+| Close (bottom right) | Clear all points without saving |
+| List (top left) | Saved measurements, with a count badge |
+| M / FT (top right) | Metric or imperial display |
+
+Up to 24 points per measurement. Portrait only.
+
+## Saving and exporting
+
+Saved measurements are stored on the device (`recordings.json` in the app's
+private storage) and survive restarts. If that file is ever unreadable it is
+renamed to `recordings.json.corrupt` rather than overwritten.
+
+Open the saved list to share or delete a measurement. Sharing writes a file and
+hands it to the Android share sheet, so it can go to Drive, email, chat, or any
+other app that accepts files.
+
+**CSV** has one row per segment and a final total row:
+
+```
+recorded_at,segment,from_point,to_point,length_m,length_display,x1_m,y1_m,z1_m,x2_m,y2_m,z2_m
+```
+
+`length_display` is formatted in whichever unit system is selected when you
+share. `length_m` is always metres.
+
+**JSON** carries the same data as structured fields:
+
+```json
+{
+  "app": "Star Measure",
+  "recorded_at": "2026-09-21T16:40:05.000",
+  "unit_system": "metric",
+  "total_m": 17.0,
+  "total_display": "17.00 m",
+  "coordinates": "ARCore world space, metres; origin is where the AR session started",
+  "points":   [{ "index": 1, "x": 0.0, "y": 0.0, "z": 0.0 }],
+  "segments": [{ "index": 1, "from": 1, "to": 2, "length_m": 5.0, "length_display": "5.00 m" }]
+}
+```
+
+Coordinates are in ARCore's world space. They describe the shape and the
+distances accurately relative to each other, but the origin is wherever the AR
+session started, so they are not a position in the room or on a map.
+
+## Requirements
+
+- An Android device that supports [ARCore](https://developers.google.com/ar/devices),
+  running Android 7.0 (API 24) or newer.
+- To build: Flutter (developed on 3.47.5 stable, Dart 3.13.4), JDK 17 or newer,
+  and the Android SDK with platform 36.
+
+## Build and run
+
+```sh
+flutter pub get
+flutter devices                 # find your phone (USB debugging enabled)
+flutter run -d <device-id>      # debug build
+flutter build apk --release     # release APK
+```
+
+The release build is signed with the debug key (see `android/app/build.gradle.kts`),
+which is fine for installing on your own devices. Set up a real signing config
+before distributing it.
+
+Tests and analysis:
+
+```sh
+flutter analyze
+flutter test
+```
+
+## How it works
+
+ARCore runs natively in Kotlin. Flutter draws every pixel of UI. They talk over
+one method channel and one event channel.
+
+```
+Kotlin (android/app/src/main/kotlin/com/example/ar_measure/)
+  ArMeasureController   owns the ARCore Session, permissions and install flow,
+                        and the channels ar_measure/ar and ar_measure/frames
+  ArMeasureView         GLSurfaceView platform view: draws the camera feed,
+                        hit-tests the screen centre each frame, keeps the anchors
+  BackgroundRenderer    camera image as a full-screen OpenGL quad
+
+Dart (lib/)
+  intro/                connect-the-diamonds gate, starfield, logo
+  measure/              AR screen, constellation painter, units, recordings,
+                        storage, and sharing
+```
+
+Each camera frame the native side sends one flat `DoubleArray`. Anchor
+positions are projected to screen coordinates natively, so Dart never needs the
+camera matrices:
+
+| Index | Meaning |
+| --- | --- |
+| 0 | Tracking: 0 stopped, 1 tracking, 2 lost |
+| 1 | Failure reason: none, bad state, too dark, too fast, few features, camera unavailable |
+| 2 | Number of tracked planes |
+| 3 | 1 if the screen centre hits a surface |
+| 4 to 6 | Reticle hit, world x y z (metres) |
+| 7 to 8 | Reticle hit, screen x y (0 to 1, top-left origin) |
+| 9 | Number of anchors, then per anchor: world x y z, screen x y, visible |
+
+The layout is documented in `ArMeasureView.kt` and decoded by `ArFrame.parse`.
+Hit tests accept a plane (inside its polygon), a depth point, or an oriented
+feature point. Depth is enabled automatically on devices that support it, which
+improves accuracy on walls and objects.
+
+The camera view is hosted with hybrid composition so the Flutter overlay can
+draw above it.
+
+## Testing
+
+`flutter test` runs 24 tests:
+
+- unit formatting (metric and imperial)
+- decoding the native frame payload, including truncated payloads
+- segment and total maths, CSV and JSON export, CSV escaping
+- the recording store: persistence, ordering, removal, change notifications,
+  and a corrupt save file
+- the intro: connecting all twelve diamonds, hold to launch, an early release
+  that must not launch, and skip
+
+The native ARCore path (session start, hit testing, anchors, projection) has no
+automated tests, because it needs a real camera. Test it on a device.
+
+## Known limitations
+
+- **Emulator.** The Android emulator's virtual-scene camera did not work in
+  testing: ARCore session creation failed on an API 36 x86_64 image, with
+  ARCore reporting no default camera 0. Use a physical device.
+- Accuracy depends on the device and on the surface. Expect roughly a
+  centimetre or two in good conditions; plain, featureless, or shiny surfaces and
+  low light are worse.
+- Android only, portrait only.
+
+## Dependency notes
+
+- `permission_handler` is pinned to `^12.0.1`. Version 13 and later require
+  `compileSdk` 37, which the Gradle and AGP setup here could not resolve.
+- `share_plus` is pinned to `^11.0.0`. Version 13 moves to `jni` native-asset
+  build hooks, which is a heavier toolchain than a share sheet needs.
+
+## Design
+
+Colours live in `lib/theme.dart`: near-black space, star white, an exoplanet
+green for anything active, and a warm amber for the logo petals. The diamond
+shape (`lib/common/diamond.dart`) is used for the intro ring, measuring points,
+the reticle, and the main button. Press coverage of the Android 17 easter egg
+describes its mechanics but not its exact colours, so the palette is an original
+interpretation rather than a copy.
