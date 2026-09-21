@@ -185,3 +185,7 @@ shape (`lib/common/diamond.dart`) is used for the intro ring, measuring points,
 the reticle, and the main button. Press coverage of the Android 17 easter egg
 describes its mechanics but not its exact colours, so the palette is an original
 interpretation rather than a copy.
+
+## License
+
+[MIT](LICENSE)
