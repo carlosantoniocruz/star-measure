@@ -186,7 +186,7 @@ draw above it.
 
 ## Testing
 
-`flutter test` runs 49 tests:
+`flutter test` runs 59 tests:
 
 - unit formatting (metric and imperial)
 - decoding the native frame payload, including truncated payloads
@@ -198,6 +198,8 @@ draw above it.
 - the history screen: newest-first order, the empty state, back, selection,
   select all, delete with confirmation (and cancelling), delete all, system back
   leaving selection first, opening a row, and Copy text reaching the clipboard
+- the measuring overlay: a distance label is drawn only when its segment's
+  midpoint is on-screen, so no labels are stranded on the edges
 - the intro: connecting all twelve diamonds, hold to launch, an early release
   that must not launch, and skip
 

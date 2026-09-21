@@ -60,9 +60,16 @@ class ConstellationPainter extends CustomPainter {
     _reticle(canvas, size.center(Offset.zero), t, hit: reticle != null);
 
     for (final label in labels) {
-      _drawLabel(canvas, size, label);
+      if (labelVisible(label.at, size)) _drawLabel(canvas, size, label);
     }
   }
+
+  /// A distance label belongs to the middle of its segment. When that point is
+  /// off-screen the label is hidden, rather than pinned to an edge where it
+  /// floats unattached (and lands on top of the controls).
+  @visibleForTesting
+  static bool labelVisible(Offset at, Size size) =>
+      at.dx >= 0 && at.dx <= size.width && at.dy >= 0 && at.dy <= size.height;
 
   void _reticle(Canvas canvas, Offset c, double t, {required bool hit}) {
     const ringRadius = 22.0;
