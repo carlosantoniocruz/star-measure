@@ -1,34 +1,61 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'intro/egg_intro.dart';
 import 'measure/measure_screen.dart';
+import 'settings.dart';
 import 'theme.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  runApp(const StarMeasureApp());
+  _registerFontLicense();
+  final settings = await AppSettings.load();
+  runApp(ShowdistApp(settings: settings));
 }
 
-class StarMeasureApp extends StatelessWidget {
-  const StarMeasureApp({super.key});
+/// JetBrains Mono is bundled under the OFL-1.1; this makes its license show
+/// up in the standard Flutter "View licenses" page (reached from About).
+void _registerFontLicense() {
+  LicenseRegistry.addLicense(() async* {
+    yield const LicenseEntryWithLineBreaks(['JetBrains Mono'], _jetBrainsMonoOfl);
+  });
+}
+
+const _jetBrainsMonoOfl = '''
+JetBrains Mono is licensed under the SIL Open Font License, Version 1.1.
+Copyright 2020 The JetBrains Mono Project Authors
+(https://github.com/JetBrains/JetBrainsMono)
+
+Full license text: assets/fonts/JetBrainsMono/OFL.txt
+''';
+
+class ShowdistApp extends StatelessWidget {
+  const ShowdistApp({super.key, required this.settings});
+
+  final AppSettings settings;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Star Measure',
-      debugShowCheckedModeBanner: false,
-      theme: Sky.theme(),
-      home: Builder(
-        builder: (context) => EggIntro(
-          onLaunch: () => Navigator.of(context).pushReplacement(
-            PageRouteBuilder<void>(
-              transitionDuration: const Duration(milliseconds: 700),
-              pageBuilder: (_, _, _) => const MeasureScreen(),
-              transitionsBuilder: (_, animation, _, child) =>
-                  FadeTransition(opacity: animation, child: child),
+    return ListenableBuilder(
+      listenable: settings,
+      builder: (context, _) => MaterialApp(
+        title: 'Showdist',
+        debugShowCheckedModeBanner: false,
+        theme: buildTheme(Brightness.light),
+        darkTheme: buildTheme(Brightness.dark),
+        themeMode: settings.themeMode,
+        home: Builder(
+          builder: (context) => EggIntro(
+            onLaunch: () => Navigator.of(context).pushReplacement(
+              PageRouteBuilder<void>(
+                transitionDuration: const Duration(milliseconds: 700),
+                pageBuilder: (_, _, _) => MeasureScreen(settings: settings),
+                transitionsBuilder: (_, animation, _, child) =>
+                    FadeTransition(opacity: animation, child: child),
+              ),
             ),
           ),
         ),

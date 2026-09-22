@@ -5,18 +5,22 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 
 /// The app mark, reduced to three flat shapes: a ring of slim diamond petals,
-/// a green planet, and one thin orbit.
+/// a centre dot, and one thin orbit. Petals and centre use [palette.emphasis]
+/// (neon on the dark theme's black; ink on the light theme's orange base, so
+/// it stays visible either way); the orbit and charge ring use [palette.onBase].
 class LogoPainter extends CustomPainter {
   LogoPainter({
     required this.scale,
     required this.opacity,
     required this.time,
+    required this.palette,
     this.charge = 0,
     this.showRing = false,
   });
 
   final double scale, opacity, time, charge;
   final bool showRing;
+  final Palette palette;
 
   static const _petals = 12;
 
@@ -45,7 +49,7 @@ class LogoPainter extends CustomPainter {
       ..lineTo(r * outer, 0)
       ..lineTo(r * mid, -r * half)
       ..close();
-    final fill = Paint()..color = Sky.petal;
+    final fill = Paint()..color = palette.emphasis;
     final turn = time * 0.03;
     for (var i = 0; i < _petals; i++) {
       canvas
@@ -61,14 +65,14 @@ class LogoPainter extends CustomPainter {
     final line = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = r * 0.014
-      ..color = Sky.star.withValues(alpha: 0.8);
+      ..color = palette.onBase.withValues(alpha: 0.8);
 
     canvas.save();
     canvas.rotate(-0.35);
     canvas.drawArc(orbit, math.pi, math.pi, false, line); // behind the planet
     canvas.restore();
 
-    canvas.drawCircle(Offset.zero, r * 0.28, Paint()..color = Sky.planet);
+    canvas.drawCircle(Offset.zero, r * 0.28, Paint()..color = palette.emphasis);
 
     canvas.save();
     canvas.rotate(-0.35);
@@ -84,7 +88,7 @@ class LogoPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
-        ..color = Sky.star.withValues(alpha: 0.14),
+        ..color = palette.onBase.withValues(alpha: 0.14),
     );
     canvas.drawArc(
       Rect.fromCircle(center: Offset.zero, radius: radius),
@@ -95,7 +99,7 @@ class LogoPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..strokeWidth = 2.5
-        ..color = Sky.planet,
+        ..color = palette.emphasis,
     );
   }
 

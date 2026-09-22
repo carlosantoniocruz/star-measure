@@ -1,8 +1,8 @@
-import 'package:ar_measure/measure/history_screen.dart';
-import 'package:ar_measure/measure/recording.dart';
-import 'package:ar_measure/measure/recording_store.dart';
-import 'package:ar_measure/measure/units.dart';
-import 'package:ar_measure/theme.dart';
+import 'package:showdist/measure/history_screen.dart';
+import 'package:showdist/measure/recording.dart';
+import 'package:showdist/measure/recording_store.dart';
+import 'package:showdist/measure/units.dart';
+import 'package:showdist/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +17,7 @@ Recording rec(String id, double metres, int minute) => Recording(
 Future<RecordingStore> pumpHistory(WidgetTester tester, {List<Recording>? items}) async {
   final store = RecordingStore.inMemory(items ?? [rec('c', 3, 30), rec('b', 2, 20), rec('a', 1, 10)]);
   await tester.pumpWidget(MaterialApp(
-    theme: Sky.theme(),
+    theme: buildTheme(Brightness.dark),
     home: Builder(
       builder: (context) => Scaffold(
         body: Center(
@@ -175,7 +175,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(copied, hasLength(1));
-    expect(copied.single, startsWith('Star Measure: 17.00 m'));
+    expect(copied.single, startsWith('Showdist: 17.00 m'));
     expect(copied.single, contains('1. 5.00 m'));
     expect(copied.single, contains('2. 12.00 m'));
     expect(find.text('Copied to clipboard'), findsOneWidget);

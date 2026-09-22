@@ -136,12 +136,13 @@ class _EggIntroState extends State<EggIntro> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Palette.of(context);
     final stage = _stage;
     final reveal = Curves.easeOutCubic.transform(_reveal.value);
     final charge = _charge.value;
 
     return Scaffold(
-      backgroundColor: Sky.space,
+      backgroundColor: palette.background,
       body: LayoutBuilder(
         builder: (context, box) {
           _size = box.biggest;
@@ -168,6 +169,7 @@ class _EggIntroState extends State<EggIntro> with TickerProviderStateMixin {
                       time: _time,
                       flow: _flow,
                       streak: _streak,
+                      palette: palette,
                     ),
                   ),
                   CustomPaint(
@@ -179,6 +181,7 @@ class _EggIntroState extends State<EggIntro> with TickerProviderStateMixin {
                       finger: _finger,
                       time: _time,
                       opacity: stage == _Stage.connect ? 1 : 1 - math.min(1, _reveal.value * 5),
+                      palette: palette,
                     ),
                   ),
                   CustomPaint(
@@ -188,6 +191,7 @@ class _EggIntroState extends State<EggIntro> with TickerProviderStateMixin {
                       time: _time,
                       charge: charge,
                       showRing: stage == _Stage.ready,
+                      palette: palette,
                     ),
                   ),
                   Positioned(
@@ -196,7 +200,7 @@ class _EggIntroState extends State<EggIntro> with TickerProviderStateMixin {
                     top: _size.height / 2 + _logoRadius * 1.4,
                     child: Opacity(
                       opacity: math.max(0, (_reveal.value - 0.6) / 0.4),
-                      child: const _Caption('STAR MEASURE', size: 13, spacing: 6, color: Sky.star),
+                      child: _Caption('SHOWDIST', size: 13, spacing: 6, color: palette.onBase),
                     ),
                   ),
                   Positioned(
@@ -207,9 +211,9 @@ class _EggIntroState extends State<EggIntro> with TickerProviderStateMixin {
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 400),
                         child: switch (stage) {
-                          _Stage.connect => const _Caption('CONNECT THE STARS', key: ValueKey('c')),
+                          _Stage.connect => _Caption('CONNECT THE STARS', key: const ValueKey('c'), color: palette.onBaseMuted),
                           _Stage.reveal => const SizedBox(key: ValueKey('r'), height: 16),
-                          _Stage.ready => const _Caption('HOLD THE LOGO TO LAUNCH', key: ValueKey('h')),
+                          _Stage.ready => _Caption('HOLD THE LOGO TO LAUNCH', key: const ValueKey('h'), color: palette.onBaseMuted),
                         },
                       ),
                     ),
@@ -220,7 +224,7 @@ class _EggIntroState extends State<EggIntro> with TickerProviderStateMixin {
                     child: SafeArea(
                       child: TextButton(
                         onPressed: _launch,
-                        style: TextButton.styleFrom(foregroundColor: Sky.dust),
+                        style: TextButton.styleFrom(foregroundColor: palette.onBaseMuted),
                         child: const Text('SKIP', style: TextStyle(letterSpacing: 3, fontSize: 12)),
                       ),
                     ),
@@ -236,7 +240,7 @@ class _EggIntroState extends State<EggIntro> with TickerProviderStateMixin {
 }
 
 class _Caption extends StatelessWidget {
-  const _Caption(this.text, {super.key, this.size = 12, this.spacing = 3, this.color = Sky.dust});
+  const _Caption(this.text, {super.key, this.size = 12, this.spacing = 3, required this.color});
 
   final String text;
   final double size, spacing;
@@ -264,6 +268,7 @@ class _RingPainter extends CustomPainter {
     required this.finger,
     required this.time,
     required this.opacity,
+    required this.palette,
   });
 
   final Offset center;
@@ -271,6 +276,7 @@ class _RingPainter extends CustomPainter {
   final int count;
   final List<int> lit;
   final Offset? finger;
+  final Palette palette;
 
   Offset _at(int i) => center + Offset.fromDirection(-math.pi / 2 + i * 2 * math.pi / count, radius);
 
@@ -279,7 +285,7 @@ class _RingPainter extends CustomPainter {
     if (opacity <= 0) return;
 
     final line = Paint()
-      ..color = Sky.star.withValues(alpha: 0.8 * opacity)
+      ..color = palette.onBase.withValues(alpha: 0.8 * opacity)
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
     for (var i = 1; i < lit.length; i++) {
@@ -290,7 +296,7 @@ class _RingPainter extends CustomPainter {
         _at(lit.last),
         finger!,
         Paint()
-          ..color = Sky.star.withValues(alpha: 0.35 * opacity)
+          ..color = palette.onBase.withValues(alpha: 0.35 * opacity)
           ..strokeWidth = 1.5
           ..strokeCap = StrokeCap.round,
       );
@@ -303,11 +309,11 @@ class _RingPainter extends CustomPainter {
           ..drawPath(
             diamondPath(p, 14),
             Paint()
-              ..color = Sky.planet.withValues(alpha: 0.25 * opacity)
+              ..color = palette.emphasis.withValues(alpha: 0.25 * opacity)
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
           )
-          ..drawPath(diamondPath(p, 10), Paint()..color = Sky.star.withValues(alpha: opacity))
-          ..drawPath(diamondPath(p, 4), Paint()..color = Sky.planet.withValues(alpha: opacity));
+          ..drawPath(diamondPath(p, 10), Paint()..color = palette.onBase.withValues(alpha: opacity))
+          ..drawPath(diamondPath(p, 4), Paint()..color = palette.emphasis.withValues(alpha: opacity));
       } else {
         final pulse = math.sin(time * 2 + i);
         canvas.drawPath(
@@ -315,7 +321,7 @@ class _RingPainter extends CustomPainter {
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.5
-            ..color = Sky.star.withValues(alpha: (0.35 + 0.25 * pulse) * opacity),
+            ..color = palette.onBase.withValues(alpha: (0.35 + 0.25 * pulse) * opacity),
         );
       }
     }

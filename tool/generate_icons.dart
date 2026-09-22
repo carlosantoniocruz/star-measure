@@ -7,8 +7,8 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:ar_measure/intro/logo_painter.dart';
-import 'package:ar_measure/theme.dart';
+import 'package:showdist/intro/logo_painter.dart';
+import 'package:showdist/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,7 +20,7 @@ const _density = {'mdpi': 1.0, 'hdpi': 1.5, 'xhdpi': 2.0, 'xxhdpi': 3.0, 'xxxhdp
 /// Draws the logo so its petal tips sit [tipRadius] * size from the centre.
 void _logo(Canvas canvas, Size size, {required double tipRadius}) {
   // LogoPainter's outer radius is 0.30 * min(size) * scale.
-  LogoPainter(scale: tipRadius / 0.30, opacity: 1, time: 0).paint(canvas, size);
+  LogoPainter(scale: tipRadius / 0.30, opacity: 1, time: 0, palette: Palette.dark).paint(canvas, size);
 }
 
 Future<void> _write(String path, int px, void Function(Canvas, Size) draw) async {
@@ -35,7 +35,7 @@ Future<void> _write(String path, int px, void Function(Canvas, Size) draw) async
 
 void main() {
   test('generate launcher icons', () async {
-    final space = Paint()..color = Sky.space;
+    final space = Paint()..color = Palette.dark.background;
 
     for (final entry in _density.entries) {
       final d = entry.value;
@@ -85,7 +85,7 @@ void main() {
 
     File('$_res/values/ic_launcher_background.xml').writeAsStringSync('''<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#04050B</color>
+    <color name="ic_launcher_background">#000000</color>
 </resources>
 ''');
   });

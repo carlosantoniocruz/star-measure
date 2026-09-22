@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:ar_measure/measure/recording.dart';
-import 'package:ar_measure/measure/recording_store.dart';
-import 'package:ar_measure/measure/share_recording.dart';
-import 'package:ar_measure/measure/units.dart';
+import 'package:showdist/measure/recording.dart';
+import 'package:showdist/measure/recording_store.dart';
+import 'package:showdist/measure/share_recording.dart';
+import 'package:showdist/measure/units.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Recording sample({DateTime? at}) => Recording(
@@ -34,7 +34,7 @@ void main() {
     test('CSV shows lengths in the chosen unit system', () {
       final csv = sample().toCsv(UnitSystem.imperial);
       expect(csv, contains('16′ 5″')); // 5 m
-      expect(csv, contains('39′ 4″')); // 12 m
+      expect(csv, contains('39′ 4 1/2″')); // 12 m, to the nearest half inch
     });
 
     test('CSV cells are escaped only when needed', () {
@@ -47,7 +47,7 @@ void main() {
 
     test('export JSON is structured and complete', () {
       final j = jsonDecode(sample().toExportJson(UnitSystem.metric)) as Map<String, dynamic>;
-      expect(j['app'], 'Star Measure');
+      expect(j['app'], 'Showdist');
       expect(j['unit_system'], 'metric');
       expect(j['total_m'], 17.0);
       expect(j['points'], hasLength(3));
@@ -149,7 +149,7 @@ void main() {
 
     test('summary lists the total and every segment', () {
       final text = recordingSummary(sample(), UnitSystem.metric);
-      expect(text, startsWith('Star Measure: 17.00 m'));
+      expect(text, startsWith('Showdist: 17.00 m'));
       expect(text, contains('3 points, 2 segments'));
       expect(text, contains('1. 5.00 m'));
       expect(text, contains('2. 12.00 m'));

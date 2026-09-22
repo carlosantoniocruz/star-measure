@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:ar_measure/intro/egg_intro.dart';
-import 'package:ar_measure/theme.dart';
+import 'package:showdist/intro/egg_intro.dart';
+import 'package:showdist/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,7 +10,7 @@ void main() {
       (tester) async {
     var launched = 0;
     await tester.pumpWidget(MaterialApp(
-      theme: Sky.theme(),
+      theme: buildTheme(Brightness.dark),
       home: EggIntro(onLaunch: () => launched++),
     ));
     await tester.pump(const Duration(milliseconds: 100));
@@ -34,7 +34,7 @@ void main() {
     // Logo flies in over 2.6s.
     await tester.pump(const Duration(milliseconds: 3000));
     expect(find.text('HOLD THE LOGO TO LAUNCH'), findsOneWidget);
-    expect(find.text('STAR MEASURE'), findsOneWidget);
+    expect(find.text('SHOWDIST'), findsOneWidget);
     expect(launched, 0);
 
     // Holding the logo for the full charge launches.
@@ -48,7 +48,7 @@ void main() {
   testWidgets('a partial hold cancels instead of launching', (tester) async {
     var launched = 0;
     await tester.pumpWidget(MaterialApp(
-      theme: Sky.theme(),
+      theme: buildTheme(Brightness.dark),
       home: EggIntro(onLaunch: () => launched++),
     ));
     await tester.pump(const Duration(milliseconds: 100));
@@ -75,7 +75,7 @@ void main() {
   testWidgets('skip launches immediately, once', (tester) async {
     var launched = 0;
     await tester.pumpWidget(MaterialApp(
-      theme: Sky.theme(),
+      theme: buildTheme(Brightness.dark),
       home: EggIntro(onLaunch: () => launched++),
     ));
     await tester.tap(find.text('SKIP'));

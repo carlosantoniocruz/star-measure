@@ -1,31 +1,197 @@
 import 'package:flutter/material.dart';
 
-/// "Night sky" palette: near-black space, cold star-white, an exoplanet green,
-/// and warm cinnamon / sunflower amber for the logo.
-abstract final class Sky {
-  static const space = Color(0xFF04050B);
-  static const star = Color(0xFFEAF1FF);
-  static const dust = Color(0xFF8A94B5);
-  static const planet = Color(0xFF63E6A1);
-  static const planetDeep = Color(0xFF0F7A54);
-  static const petal = Color(0xFFFFD98A);
-  static const bun = Color(0xFFE9974F);
-  static const bunDeep = Color(0xFF9A5426);
-  static const icing = Color(0xFFFFF1D0);
+/// The raw Showdist palette. Prefer [Palette] (theme-aware) in UI code —
+/// these are the source hues it's built from, plus [Hue.neon], which is used
+/// directly for the camera overlay in both themes.
+abstract final class Hue {
+  static const neon = Color(0xFFFF5F1F);
+  static const bright = Color(0xFFFF7A33);
+  static const burnt = Color(0xFFB8430F);
+  static const deep = Color(0xFF7A2A06);
+  static const ink = Color(0xFF111111);
+  static const black = Color(0xFF000000);
+}
 
-  /// Destructive actions (delete).
-  static const alert = Color(0xFFFF8A80);
+/// JetBrains Mono, bundled under `assets/fonts/` (OFL-1.1 licensed — see
+/// `assets/fonts/JetBrainsMono/OFL.txt`). It's the only font used app-wide.
+const showdistFontFamily = 'JetBrains Mono';
 
-  static ThemeData theme() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: planet,
-      brightness: Brightness.dark,
-    ).copyWith(surface: space);
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: space,
-      fontFamily: 'Roboto',
+/// JetBrains Mono's zero is dotted by default; the 'zero' OpenType feature
+/// (Flutter's [FontFeature.slashedZero]) switches it to a slashed zero so
+/// 0/O and 1/l/I stay unmistakable. Applied to every text style in the app.
+const showdistFontFeatures = [FontFeature.slashedZero()];
+
+/// Theme-aware colors, reached via `Palette.of(context)`. Every text/background
+/// combination used here is checked against WCAG 4.5:1:
+///   Ink on Neon    6.2:1   Ink on Bright   7.3:1
+///   White on Burnt 5.5:1   White on Deep   9.7:1
+/// so Ink only ever sits on Neon/Bright, and White only on Burnt/Deep/Black.
+/// (Secondary/"muted" tones are solid colors, not opacity, so they can't drift
+/// below the ratio a themed screen was checked at.)
+@immutable
+class Palette extends ThemeExtension<Palette> {
+  const Palette({
+    required this.background,
+    required this.bar,
+    required this.card,
+    required this.onBase,
+    required this.onBaseMuted,
+    required this.onSurface,
+    required this.onSurfaceMuted,
+    required this.emphasis,
+    required this.alertIcon,
+    required this.alertOnCard,
+  });
+
+  /// Main scaffold / camera backdrop.
+  final Color background;
+
+  /// App bar / header strip.
+  final Color bar;
+
+  /// Sheets, dialogs, popup menus.
+  final Color card;
+
+  /// Primary text/icon on [background].
+  final Color onBase;
+
+  /// Secondary text/icon on [background] (still 4.5:1 solid, not alpha).
+  final Color onBaseMuted;
+
+  /// Primary text/icon on [bar] or [card].
+  final Color onSurface;
+
+  /// Secondary text/icon on [bar] or [card].
+  final Color onSurfaceMuted;
+
+  /// Accent for active/selected/lit state, drawn on [background]. Neon on the
+  /// dark theme's black; Ink on the light theme's orange base, since neon on
+  /// neon has almost no contrast.
+  final Color emphasis;
+
+  /// Destructive-action icon tint on [background] (decorative; text stays
+  /// [onBase]/[onSurface] so it's never a fresh color to re-check).
+  final Color alertIcon;
+
+  /// Destructive-action tint on [card] (e.g. a delete confirmation's button).
+  final Color alertOnCard;
+
+  static const dark = Palette(
+    background: Hue.black,
+    bar: Hue.black,
+    card: Color(0xFF12141C),
+    onBase: Colors.white,
+    onBaseMuted: Color(0xFFB8B8B8),
+    onSurface: Colors.white,
+    onSurfaceMuted: Color(0xFFB8B8B8),
+    emphasis: Hue.neon,
+    alertIcon: Color(0xFFFF6B57),
+    alertOnCard: Color(0xFFFF6B57),
+  );
+
+  static const light = Palette(
+    background: Hue.bright,
+    bar: Hue.deep,
+    card: Hue.burnt,
+    onBase: Hue.ink,
+    onBaseMuted: Color(0xFF2B1D14),
+    onSurface: Colors.white,
+    onSurfaceMuted: Color(0xFFE8E8E8),
+    emphasis: Hue.ink,
+    alertIcon: Color(0xFF6B1206),
+    alertOnCard: Color(0xFFFFDCD3),
+  );
+
+  static Palette of(BuildContext context) => Theme.of(context).extension<Palette>()!;
+
+  @override
+  Palette copyWith({
+    Color? background,
+    Color? bar,
+    Color? card,
+    Color? onBase,
+    Color? onBaseMuted,
+    Color? onSurface,
+    Color? onSurfaceMuted,
+    Color? emphasis,
+    Color? alertIcon,
+    Color? alertOnCard,
+  }) {
+    return Palette(
+      background: background ?? this.background,
+      bar: bar ?? this.bar,
+      card: card ?? this.card,
+      onBase: onBase ?? this.onBase,
+      onBaseMuted: onBaseMuted ?? this.onBaseMuted,
+      onSurface: onSurface ?? this.onSurface,
+      onSurfaceMuted: onSurfaceMuted ?? this.onSurfaceMuted,
+      emphasis: emphasis ?? this.emphasis,
+      alertIcon: alertIcon ?? this.alertIcon,
+      alertOnCard: alertOnCard ?? this.alertOnCard,
     );
   }
+
+  @override
+  Palette lerp(ThemeExtension<Palette>? other, double t) {
+    if (other is! Palette) return this;
+    return Palette(
+      background: Color.lerp(background, other.background, t)!,
+      bar: Color.lerp(bar, other.bar, t)!,
+      card: Color.lerp(card, other.card, t)!,
+      onBase: Color.lerp(onBase, other.onBase, t)!,
+      onBaseMuted: Color.lerp(onBaseMuted, other.onBaseMuted, t)!,
+      onSurface: Color.lerp(onSurface, other.onSurface, t)!,
+      onSurfaceMuted: Color.lerp(onSurfaceMuted, other.onSurfaceMuted, t)!,
+      emphasis: Color.lerp(emphasis, other.emphasis, t)!,
+      alertIcon: Color.lerp(alertIcon, other.alertIcon, t)!,
+      alertOnCard: Color.lerp(alertOnCard, other.alertOnCard, t)!,
+    );
+  }
+}
+
+/// Builds the light or dark [ThemeData], with JetBrains Mono (and its slashed
+/// zero) applied to every text-theme role so it reaches plain `TextStyle`s
+/// that don't set their own `fontFamily`/`fontFeatures` (see [TextStyle.merge]).
+ThemeData buildTheme(Brightness brightness) {
+  final palette = brightness == Brightness.dark ? Palette.dark : Palette.light;
+  final scheme = ColorScheme.fromSeed(
+    seedColor: Hue.neon,
+    brightness: brightness,
+  ).copyWith(surface: palette.card, primary: palette.emphasis);
+
+  final baseTextTheme = (brightness == Brightness.dark ? Typography.whiteMountainView : Typography.blackMountainView)
+      .apply(fontFamily: showdistFontFamily);
+  final textTheme = _withFontFeatures(baseTextTheme);
+
+  return ThemeData(
+    useMaterial3: true,
+    brightness: brightness,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: palette.background,
+    fontFamily: showdistFontFamily,
+    textTheme: textTheme,
+    primaryTextTheme: textTheme,
+    extensions: [palette],
+  );
+}
+
+TextTheme _withFontFeatures(TextTheme t) {
+  TextStyle? apply(TextStyle? s) => s?.copyWith(fontFeatures: showdistFontFeatures);
+  return t.copyWith(
+    displayLarge: apply(t.displayLarge),
+    displayMedium: apply(t.displayMedium),
+    displaySmall: apply(t.displaySmall),
+    headlineLarge: apply(t.headlineLarge),
+    headlineMedium: apply(t.headlineMedium),
+    headlineSmall: apply(t.headlineSmall),
+    titleLarge: apply(t.titleLarge),
+    titleMedium: apply(t.titleMedium),
+    titleSmall: apply(t.titleSmall),
+    bodyLarge: apply(t.bodyLarge),
+    bodyMedium: apply(t.bodyMedium),
+    bodySmall: apply(t.bodySmall),
+    labelLarge: apply(t.labelLarge),
+    labelMedium: apply(t.labelMedium),
+    labelSmall: apply(t.labelSmall),
+  );
 }

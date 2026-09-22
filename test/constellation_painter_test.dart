@@ -1,6 +1,6 @@
-import 'package:ar_measure/measure/ar_frame.dart';
-import 'package:ar_measure/measure/constellation_painter.dart';
-import 'package:ar_measure/measure/units.dart';
+import 'package:showdist/measure/ar_frame.dart';
+import 'package:showdist/measure/constellation_painter.dart';
+import 'package:showdist/measure/units.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

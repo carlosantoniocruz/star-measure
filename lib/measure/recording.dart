@@ -82,7 +82,7 @@ class Recording {
   String toExportJson(UnitSystem units) {
     final segs = segments;
     return const JsonEncoder.withIndent('  ').convert({
-      'app': 'Star Measure',
+      'app': 'Showdist',
       'recorded_at': createdAt.toIso8601String(),
       'unit_system': units.name,
       'total_m': double.parse(_m(total)),

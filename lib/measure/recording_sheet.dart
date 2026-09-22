@@ -44,10 +44,11 @@ class ShareMenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Palette.of(context);
     return PopupMenuButton<ShareChoice>(
       tooltip: 'Share or copy',
-      icon: const Icon(Icons.ios_share_rounded, color: Sky.star, size: 22),
-      color: const Color(0xFF12141C),
+      icon: Icon(Icons.ios_share_rounded, color: palette.onBase, size: 22),
+      color: palette.card,
       onSelected: onSelected,
       itemBuilder: (_) => [
         for (final c in ShareChoice.values)
@@ -55,7 +56,7 @@ class ShareMenuButton extends StatelessWidget {
             value: c,
             child: Row(
               children: [
-                Icon(_icon(c), size: 18, color: Sky.star.withValues(alpha: 0.8)),
+                Icon(_icon(c), size: 18, color: palette.onSurface.withValues(alpha: 0.8)),
                 const SizedBox(width: 12),
                 Text(c.label),
               ],
@@ -84,6 +85,7 @@ class RecordingSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Palette.of(context);
     final segments = recording.segments;
     return SafeArea(
       child: ConstrainedBox(
@@ -93,17 +95,17 @@ class RecordingSheet extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Caption(title),
+              Caption(title, color: palette.onSurfaceMuted),
               const SizedBox(height: 10),
               Text(
                 formatLength(recording.total, units),
-                style: const TextStyle(color: Sky.star, fontSize: 44, fontWeight: FontWeight.w200),
+                style: TextStyle(color: palette.onSurface, fontSize: 44, fontWeight: FontWeight.w200),
               ),
               const SizedBox(height: 4),
               Text(
                 '${recording.points.length} points · ${segments.length} segments · ${formatStamp(recording.createdAt)}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Sky.dust, fontSize: 13),
+                style: TextStyle(color: palette.onSurfaceMuted, fontSize: 13),
               ),
               const SizedBox(height: 18),
               for (var i = 0; i < segments.length; i++)
@@ -113,14 +115,14 @@ class RecordingSheet extends StatelessWidget {
                     children: [
                       SizedBox(
                         width: 32,
-                        child: Text('${i + 1}', style: const TextStyle(color: Sky.dust, fontSize: 13)),
+                        child: Text('${i + 1}', style: TextStyle(color: palette.onSurfaceMuted, fontSize: 13)),
                       ),
                       Text(
                         formatLength(segments[i], units),
-                        style: const TextStyle(
-                          color: Sky.star,
+                        style: TextStyle(
+                          color: palette.onSurface,
                           fontSize: 15,
-                          fontFeatures: [FontFeature.tabularFigures()],
+                          fontFeatures: [...showdistFontFeatures, const FontFeature.tabularFigures()],
                         ),
                       ),
                     ],
@@ -136,8 +138,8 @@ class RecordingSheet extends StatelessWidget {
                         icon: const Icon(Icons.ios_share_rounded, size: 18),
                         label: Text(c.label),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Sky.star,
-                          side: BorderSide(color: Sky.star.withValues(alpha: 0.3)),
+                          foregroundColor: palette.onSurface,
+                          side: BorderSide(color: palette.onSurface.withValues(alpha: 0.3)),
                         ),
                       ),
                     ),
@@ -150,11 +152,11 @@ class RecordingSheet extends StatelessWidget {
                 onPressed: () => onChoice(ShareChoice.copyText),
                 icon: const Icon(Icons.content_copy_rounded, size: 18),
                 label: Text(ShareChoice.copyText.label),
-                style: TextButton.styleFrom(foregroundColor: Sky.star),
+                style: TextButton.styleFrom(foregroundColor: palette.onSurface),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                style: TextButton.styleFrom(foregroundColor: Sky.dust),
+                style: TextButton.styleFrom(foregroundColor: palette.onSurfaceMuted),
                 child: const Text('Done'),
               ),
             ],

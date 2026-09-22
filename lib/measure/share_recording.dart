@@ -49,7 +49,7 @@ String exportDirPath(String cacheDir) => '$cacheDir/exports';
 String recordingSummary(Recording r, UnitSystem units, {int maxSegments = 20}) {
   final segments = r.segments;
   final buf = StringBuffer()
-    ..writeln('Star Measure: ${formatLength(r.total, units)}')
+    ..writeln('Showdist: ${formatLength(r.total, units)}')
     ..writeln('${r.points.length} points, ${segments.length} segments · ${formatStamp(r.createdAt)}');
   final shown = segments.length < maxSegments ? segments.length : maxSegments;
   for (var i = 0; i < shown; i++) {
@@ -80,7 +80,7 @@ Future<void> shareRecording(Recording r, UnitSystem units, ExportFormat format) 
   await SharePlus.instance.share(
     ShareParams(
       files: [XFile(file.path, mimeType: format.mimeType, name: name)],
-      subject: 'Star Measure: ${formatLength(r.total, units)}',
+      subject: 'Showdist: ${formatLength(r.total, units)}',
       text: recordingSummary(r, units),
     ),
   );

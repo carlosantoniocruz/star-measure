@@ -1,4 +1,4 @@
-package com.example.ar_measure
+package com.showconfigs.showdist
 
 import android.Manifest
 import android.app.Activity

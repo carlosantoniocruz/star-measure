@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.ar_measure"
+    namespace = "com.showconfigs.showdist"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,8 +15,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.ar_measure"
+        applicationId = "com.showconfigs.showdist"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = maxOf(24, flutter.minSdkVersion) // ARCore requires API 24+

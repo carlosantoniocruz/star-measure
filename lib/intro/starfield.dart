@@ -38,10 +38,12 @@ class StarfieldPainter extends CustomPainter {
     required this.time,
     required this.flow,
     required this.streak,
+    required this.palette,
   });
 
   final List<Star> stars;
   final double time, flow, streak;
+  final Palette palette;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -56,7 +58,7 @@ class StarfieldPainter extends CustomPainter {
       final p = c + dir * r;
       final twinkle = 0.55 + 0.45 * math.sin(time * 2 + s.phase);
       final alpha = (twinkle * (0.2 + 0.6 * d)).clamp(0.0, 1.0);
-      paint.color = Sky.star.withValues(alpha: alpha);
+      paint.color = palette.onBase.withValues(alpha: alpha);
 
       if (streak > 0.02) {
         final tail = c + dir * (r * (1 - math.min(0.9, streak * 0.12 * (0.4 + d))));
@@ -73,5 +75,5 @@ class StarfieldPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(StarfieldPainter old) =>
-      old.time != time || old.flow != flow || old.streak != streak;
+      old.time != time || old.flow != flow || old.streak != streak || old.palette != palette;
 }

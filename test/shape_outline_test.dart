@@ -1,5 +1,5 @@
-import 'package:ar_measure/measure/recording.dart';
-import 'package:ar_measure/measure/shape_outline.dart';
+import 'package:showdist/measure/recording.dart';
+import 'package:showdist/measure/shape_outline.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,16 +1,18 @@
-# Star Measure
+# Showdist
 
-<p align="center"><img src="docs/logo.png" width="160" alt="Star Measure logo: a ring of amber diamond petals around a green planet"></p>
+<p align="center"><img src="docs/logo.png" width="160" alt="Showdist logo"></p>
 
 An augmented-reality tape measure for Android, built with Flutter and ARCore.
 Point the camera at a surface, tap to drop points, and read off the distances.
 Measurements can be saved on the device, browsed in a history, and exported as
 CSV or JSON through the Android share sheet, or copied as text.
 
-The look is a minimal night sky: a ring of diamonds you connect to get in, a
-flat logo, hairline measuring lines, and small diamonds for points. It is
-inspired by the connect-the-dots easter egg in Android 17. It is an
-independent project and is not affiliated with Google or Android.
+The look is neon orange on black (or, in light mode, orange throughout): a
+ring of diamonds you connect to get in, a flat logo, hairline measuring
+lines, and small diamonds for points. The connect-the-dots mechanic is
+inspired by an easter egg in Android 17; the palette and everything else is
+Showdist's own. It is an independent project and is not affiliated with
+Google or Android.
 
 ## Using it
 
@@ -39,9 +41,24 @@ The bottom row, left to right:
 | Diamond button, tap | Place a point at the reticle |
 | Diamond button, hold (0.8 s) | Save the measurement and start fresh |
 | Close | Clear all points without saving |
+| Gear | Open Settings |
 | M / FT | Metric or imperial display |
 
 Up to 24 points per measurement. Portrait only.
+
+## Settings
+
+Reached from the gear icon while measuring. Both choices are saved on device
+and restored on the next launch:
+
+- **Theme** — System (default), Light, or Dark. Both themes are neon orange:
+  black with neon accents in Dark, an orange base with darker-orange bars and
+  cards in Light.
+- **Units** — Imperial (default: feet and inches, e.g. `4′ 7 1/2″`) or
+  Metric. The same setting drives the in-AR M/FT toggle.
+
+**About**, one tap further in, shows the app name, version, and a licenses
+page (Flutter, ARCore, and the bundled JetBrains Mono font).
 
 ## Saving and exporting
 
@@ -73,7 +90,7 @@ share menu on each history row:
 - **Copy text** puts that plain-text summary on the clipboard:
 
   ```
-  Star Measure: 17.00 m
+  Showdist: 17.00 m
   3 points, 2 segments · Sep 21, 16:40
   1. 5.00 m
   2. 12.00 m
@@ -92,7 +109,7 @@ share. `length_m` is always metres.
 
 ```json
 {
-  "app": "Star Measure",
+  "app": "Showdist",
   "recorded_at": "2026-09-21T16:40:05.000",
   "unit_system": "metric",
   "total_m": 17.0,
@@ -148,7 +165,7 @@ ARCore runs natively in Kotlin. Flutter draws every pixel of UI. They talk over
 one method channel and one event channel.
 
 ```
-Kotlin (android/app/src/main/kotlin/com/example/ar_measure/)
+Kotlin (android/app/src/main/kotlin/com/showconfigs/showdist/)
   ArMeasureController   owns the ARCore Session, permissions and install flow,
                         and the channels ar_measure/ar and ar_measure/frames
   ArMeasureView         GLSurfaceView platform view: draws the camera feed,
@@ -186,7 +203,7 @@ draw above it.
 
 ## Testing
 
-`flutter test` runs 59 tests:
+`flutter test` runs 60 tests:
 
 - unit formatting (metric and imperial)
 - decoding the native frame payload, including truncated payloads
@@ -222,15 +239,41 @@ automated tests, because it needs a real camera. Test it on a device.
   `compileSdk` 37, which the Gradle and AGP setup here could not resolve.
 - `share_plus` is pinned to `^11.0.0`. Version 13 moves to `jni` native-asset
   build hooks, which is a heavier toolchain than a share sheet needs.
+- `shared_preferences` stores the Settings screen's theme and units choices.
 
 ## Design
 
-Colours live in `lib/theme.dart`: near-black space, star white, an exoplanet
-green for anything active, and a warm amber for the logo petals. The diamond
-shape (`lib/common/diamond.dart`) is used for the intro ring, measuring points,
-the reticle, and the main button. Press coverage of the Android 17 easter egg
-describes its mechanics but not its exact colours, so the palette is an original
-interpretation rather than a copy.
+Colours live in `lib/theme.dart` as `Palette`, a `ThemeExtension` reached with
+`Palette.of(context)`, plus the raw hues in `Hue`:
+
+| | Neon `#FF5F1F` | Bright `#FF7A33` | Burnt `#B8430F` | Deep `#7A2A06` | Ink `#111111` | Black `#000000` |
+| --- | --- | --- | --- | --- | --- | --- |
+
+- **Dark** (default under System, on an OLED-friendly black): background and
+  bars are Black, text is white, the active/accent colour is Neon.
+- **Light**: the base is Bright instead of white; bars, cards, and headers are
+  Deep/Burnt; text is Ink on the orange surfaces, white on the dark ones (the
+  active/accent colour is Ink too — Neon on Bright has almost no contrast).
+- **Camera overlay** (`ConstellationPainter`): lines, the reticle, and
+  distance labels are always Neon, with a small dark drop shadow, regardless
+  of theme — it sits on the live camera feed, not the app's own chrome.
+
+Every text/background combination the app actually uses was checked against
+WCAG's 4.5:1: Ink on Neon (6.2:1) and Bright (7.3:1); white on Burnt (5.5:1)
+and Deep (9.7:1). Secondary/"muted" text is a second solid colour, not the
+primary colour at reduced opacity, so dimming it can't quietly drop it below
+the ratio a screen was checked at.
+
+Text is set in **JetBrains Mono** (bundled under `assets/fonts/`, OFL-1.1
+licensed — see `assets/fonts/JetBrainsMono/OFL.txt`), the only font in the
+app. Its zero is dotted by default; the app turns on the `zero` OpenType
+feature (`FontFeature.slashedZero()`) everywhere so 0/O and 1/l/I stay
+unmistakable.
+
+The diamond shape (`lib/common/diamond.dart`) is used for the intro ring,
+measuring points, the reticle, and the main button. Press coverage of the
+Android 17 easter egg describes its mechanics but not its exact colours, so
+the palette is an original interpretation rather than a copy.
 
 ## License
 
