@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../common/caption.dart';
-import '../common/diamond.dart';
 import '../theme.dart';
 import 'recording.dart';
 import 'recording_sheet.dart';
@@ -268,7 +267,7 @@ class _ShapeThumb extends CustomPainter {
 
     final dot = Paint()..color = color;
     for (final p in pts) {
-      canvas.drawPath(diamondPath(p, 2.6), dot);
+      canvas.drawCircle(p, 2.6, dot);
     }
   }
 

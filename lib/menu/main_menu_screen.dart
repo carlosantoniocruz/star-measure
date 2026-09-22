@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../common/caption.dart';
+import '../common/wordmark_painter.dart';
 import '../level/level_screen.dart';
 import '../measure/measure_screen.dart';
 import '../measure/settings_screen.dart';
@@ -9,7 +10,7 @@ import '../settings.dart';
 import '../theme.dart';
 
 /// The app's home screen: choose Measurement or Level. Settings is one tap
-/// away, top-right.
+/// away, top-right; the Showdist mark sits at the bottom, bare.
 class MainMenuScreen extends StatefulWidget {
   const MainMenuScreen({super.key, required this.settings});
 
@@ -46,6 +47,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
       backgroundColor: palette.background,
       body: SafeArea(
         child: Stack(
+          fit: StackFit.expand,
           children: [
             Positioned.fill(
               child: ValueListenableBuilder<double>(
@@ -64,24 +66,25 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
                 ),
               ),
             ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       _MenuTile(
-                        icon: Icons.straighten_rounded,
                         label: 'MEASUREMENT',
                         palette: palette,
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(builder: (_) => MeasureScreen(settings: widget.settings)),
                         ),
                       ),
-                      const SizedBox(height: 16),
                       _MenuTile(
-                        icon: Icons.architecture_rounded,
                         label: 'LEVEL',
                         palette: palette,
                         onTap: () => Navigator.of(context).push(
@@ -91,7 +94,27 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
                     ],
                   ),
                 ),
-              ],
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 28,
+              child: Center(
+                child: SizedBox(
+                  width: 180,
+                  height: 84,
+                  child: CustomPaint(
+                    painter: WordmarkPainter(
+                      paintBackground: false,
+                      topColor: palette.onBase,
+                      bottomColor: palette.emphasis,
+                      maxWidthFraction: 0.95,
+                      maxHeightFraction: 0.85,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -102,8 +125,6 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
 
 /// A drifting ruler edge — a baseline with alternating minor/major tick
 /// marks hanging from it, like a tape measure — behind the menu's tiles.
-/// Replaces the wordmark as the screen's main visual: bigger, and always
-/// moving sideways.
 class _RulerPainter extends CustomPainter {
   const _RulerPainter({required this.offset, required this.palette});
 
@@ -114,7 +135,7 @@ class _RulerPainter extends CustomPainter {
   static const _majorEvery = 5;
   static const _minorHeight = 16.0;
   static const _majorHeight = 34.0;
-  static const _bandY = 0.30; // fraction of the screen height
+  static const _bandY = 0.22; // fraction of the screen height
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -145,10 +166,10 @@ class _RulerPainter extends CustomPainter {
   bool shouldRepaint(_RulerPainter old) => old.offset != offset || old.palette != palette;
 }
 
+/// Just the word — no icon, no container, no divider. Tappable, centred.
 class _MenuTile extends StatelessWidget {
-  const _MenuTile({required this.icon, required this.label, required this.onTap, required this.palette});
+  const _MenuTile({required this.label, required this.onTap, required this.palette});
 
-  final IconData icon;
   final String label;
   final VoidCallback onTap;
   final Palette palette;
@@ -156,21 +177,12 @@ class _MenuTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: palette.card,
-      borderRadius: BorderRadius.circular(16),
+      color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
-          child: Row(
-            children: [
-              Icon(icon, color: palette.onSurface, size: 26),
-              const SizedBox(width: 18),
-              Expanded(child: Caption(label, size: 15, spacing: 2, color: palette.onSurface)),
-              Icon(Icons.chevron_right_rounded, color: palette.onSurfaceMuted),
-            ],
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 22),
+          child: Center(child: Caption(label, size: 15, spacing: 2, color: palette.onBase)),
         ),
       ),
     );

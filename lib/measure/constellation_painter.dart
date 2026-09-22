@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../common/diamond.dart';
 import '../theme.dart';
 import 'ar_frame.dart';
 import 'units.dart';
@@ -28,8 +27,8 @@ Paint _shadowOf(Paint base) => Paint()
 const _labelShadow = [Shadow(color: _shadowColor, blurRadius: 3, offset: Offset(0, 1))];
 
 /// Draws measurements over the camera feed with as little as possible: small
-/// diamonds for points, hairlines between them, a quiet pill for each
-/// distance, and four tiny diamonds as the aiming reticle.
+/// dots for points, hairlines between them, a quiet pill for each distance,
+/// and four tiny dots as the aiming reticle.
 class ConstellationPainter extends CustomPainter {
   ConstellationPainter({
     required this.frame,
@@ -73,7 +72,7 @@ class ConstellationPainter extends CustomPainter {
 
     final marker = Paint()..color = _overlay;
     for (final p in pts) {
-      if (p.visible) _drawShadowedPath(canvas, diamondPath(px(p), 6), marker);
+      if (p.visible) _drawShadowedCircle(canvas, px(p), 6, marker);
     }
 
     _reticle(canvas, size.center(Offset.zero), t, hit: reticle != null);
@@ -98,7 +97,7 @@ class ConstellationPainter extends CustomPainter {
       ..color = _overlay.withValues(alpha: hit ? 1 : 0.5);
     for (var k = 0; k < 4; k++) {
       final p = c + Offset.fromDirection(t * 0.4 + k * math.pi / 2, ringRadius);
-      _drawShadowedPath(canvas, diamondPath(p, 4.5), paint);
+      _drawShadowedCircle(canvas, p, 4.5, paint);
     }
     _drawShadowedCircle(canvas, c, 1.8, Paint()..color = Colors.white.withValues(alpha: hit ? 0.95 : 0.5));
   }
@@ -115,11 +114,6 @@ class ConstellationPainter extends CustomPainter {
   void _drawShadowedLine(Canvas canvas, Offset a, Offset b, Paint paint) {
     canvas.drawLine(a + _shadowOffset, b + _shadowOffset, _shadowOf(paint));
     canvas.drawLine(a, b, paint);
-  }
-
-  void _drawShadowedPath(Canvas canvas, Path path, Paint paint) {
-    canvas.drawPath(path.shift(_shadowOffset), _shadowOf(paint));
-    canvas.drawPath(path, paint);
   }
 
   void _drawShadowedCircle(Canvas canvas, Offset c, double r, Paint paint) {

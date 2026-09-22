@@ -9,7 +9,6 @@ import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../common/caption.dart';
-import '../common/diamond.dart';
 import '../settings.dart';
 import '../theme.dart';
 import 'ar_channel.dart';
@@ -529,7 +528,7 @@ class _IconAction extends StatelessWidget {
   }
 }
 
-/// A thin ring around a diamond. Tap adds a point (lit when the reticle is on
+/// A thin ring around a dot. Tap adds a point (lit when the reticle is on
 /// a surface). [charge] (0 to 1, driven by holding anywhere on screen) fills
 /// the ring; reaching 1 saves the measurement.
 class _AddButton extends StatelessWidget {
@@ -592,7 +591,7 @@ class _AddButtonPainter extends CustomPainter {
           ..color = palette.onBase,
       );
     }
-    canvas.drawPath(diamondPath(c, 14), Paint()..color = accent);
+    canvas.drawCircle(c, 14, Paint()..color = accent);
   }
 
   @override
@@ -617,7 +616,7 @@ class _ProblemView extends StatelessWidget {
               SizedBox(
                 width: 40,
                 height: 40,
-                child: CustomPaint(painter: _DiamondMark(_palette.emphasis.withValues(alpha: 0.85))),
+                child: CustomPaint(painter: _CircleMark(_palette.emphasis.withValues(alpha: 0.85))),
               ),
               const SizedBox(height: 24),
               Text(
@@ -650,17 +649,15 @@ class _ProblemView extends StatelessWidget {
   }
 }
 
-class _DiamondMark extends CustomPainter {
-  const _DiamondMark(this.color);
+class _CircleMark extends CustomPainter {
+  const _CircleMark(this.color);
 
   final Color color;
 
   @override
-  void paint(Canvas canvas, Size size) => canvas.drawPath(
-        diamondPath(size.center(Offset.zero), size.height / 2),
-        Paint()..color = color,
-      );
+  void paint(Canvas canvas, Size size) =>
+      canvas.drawCircle(size.center(Offset.zero), size.height / 2, Paint()..color = color);
 
   @override
-  bool shouldRepaint(_DiamondMark old) => old.color != color;
+  bool shouldRepaint(_CircleMark old) => old.color != color;
 }

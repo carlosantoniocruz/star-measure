@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'common/caption.dart';
-import 'common/wordmark_painter.dart';
+import 'common/tick_ring_painter.dart';
 import 'theme.dart';
 
 /// Keep in sync with pubspec.yaml's `version:` — Flutter has no built-in way
@@ -38,7 +38,7 @@ class AboutScreen extends StatelessWidget {
               height: 72,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: const CustomPaint(painter: WordmarkPainter()),
+                child: const CustomPaint(painter: TickRingPainter()),
               ),
             ),
           ),

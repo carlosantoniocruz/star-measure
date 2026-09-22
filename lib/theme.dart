@@ -23,12 +23,18 @@ const showdistFontFeatures = [FontFeature.slashedZero()];
 
 /// Theme-aware colors, reached via `Palette.of(context)`. Every text/background
 /// combination used here is checked against WCAG 4.5:1:
-///   Dark:  white on Black          21:1     Neon on Black        6.9:1
-///   Light: #262626 on #DCDCDC (bar, the darkest light-mode surface)  11:1
-///          Burnt (the accent) on #EDEDED (background)                4.7:1
-///          #B3261E (alert) on white (card)                           6.5:1
+///   Dark:  white on Black                    21:1   Neon on Black       6.9:1
+///   Light: #262626 on #9E9E9E (background)   5.7:1   white on #616161  6.2:1
+///          white on #757575 (card)           4.6:1
+/// A medium grey background (#9E9E9E) is close to the worst case for text
+/// contrast against both black and white, which is why Light's numbers have
+/// less headroom than Dark's — and why `emphasis` (Deep, a dark muted
+/// orange) only clears 3:1 there, enough for icons/graphics but not body
+/// text, so nothing in the app sets emphasis as a text color in Light.
 /// (Secondary/"muted" tones are solid colors, not opacity, so they can't drift
-/// below the ratio a themed screen was checked at.)
+/// below the ratio a themed screen was checked at; on Light's bar/card,
+/// white has so little headroom to begin with that "muted" is just white
+/// again — de-emphasis there comes from size/weight only.)
 @immutable
 class Palette extends ThemeExtension<Palette> {
   const Palette({
@@ -96,16 +102,16 @@ class Palette extends ThemeExtension<Palette> {
   // standing in for the accent, since Neon has almost no contrast against a
   // light background of any kind.
   static const light = Palette(
-    background: Color(0xFFEDEDED),
-    bar: Color(0xFFDCDCDC),
-    card: Colors.white,
+    background: Color(0xFF9E9E9E),
+    bar: Color(0xFF616161),
+    card: Color(0xFF757575),
     onBase: Color(0xFF262626),
-    onBaseMuted: Color(0xFF595959),
-    onSurface: Color(0xFF262626),
-    onSurfaceMuted: Color(0xFF595959),
-    emphasis: Hue.burnt,
+    onBaseMuted: Color(0xFF333333),
+    onSurface: Colors.white,
+    onSurfaceMuted: Colors.white,
+    emphasis: Hue.deep,
     alertIcon: Color(0xFFB3261E),
-    alertOnCard: Color(0xFFB3261E),
+    alertOnCard: Colors.white,
   );
 
   static Palette of(BuildContext context) => Theme.of(context).extension<Palette>()!;

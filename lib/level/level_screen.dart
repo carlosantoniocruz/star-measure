@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 import '../common/caption.dart';
-import '../common/diamond.dart';
 import '../theme.dart';
 
 /// Within this many degrees of plumb, the bubble reads as level.
@@ -13,7 +12,7 @@ const _levelThresholdDeg = 0.3;
 
 /// A bubble level for things mounted on a wall — a shelf, a picture frame, a
 /// TV bracket. Hold the phone upright and flat against the wall (or against
-/// whatever you're checking); the diamond centres and the ring lights up
+/// whatever you're checking); the dot centres and the ring lights up
 /// when it's plumb.
 class LevelScreen extends StatefulWidget {
   const LevelScreen({super.key});
@@ -110,7 +109,10 @@ class _LevelScreenState extends State<LevelScreen> {
                   child: Text(
                     '${degrees.toStringAsFixed(1)}°',
                     style: TextStyle(
-                      color: level ? palette.emphasis : palette.onBase,
+                      // Text always uses onBase — emphasis isn't guaranteed
+                      // to meet text contrast in every theme (see theme.dart);
+                      // "level" is already signalled by the ring lighting up.
+                      color: palette.onBase,
                       fontSize: 40,
                       fontWeight: FontWeight.w200,
                       fontFeatures: [...showdistFontFeatures, const FontFeature.tabularFigures()],
@@ -150,7 +152,7 @@ class _BubblePainter extends CustomPainter {
     final bubble = raw.distance > radius ? raw * (radius / raw.distance) : raw;
     final accent = level ? palette.emphasis : palette.onBase;
 
-    canvas.drawPath(diamondPath(c + bubble, level ? 12 : 9), Paint()..color = accent);
+    canvas.drawCircle(c + bubble, level ? 12 : 9, Paint()..color = accent);
     if (level) {
       canvas.drawCircle(
         c,
