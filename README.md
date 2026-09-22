@@ -7,18 +7,16 @@ Point the camera at a surface, tap to drop points, and read off the distances.
 Measurements can be saved on the device, browsed in a history, and exported as
 CSV or JSON through the Android share sheet, or copied as text.
 
-The look is neon orange on black (or, in light mode, orange throughout): a
-ring of diamonds you connect to get in, a flat logo, hairline measuring
-lines, and small diamonds for points. The connect-the-dots mechanic is
-inspired by an easter egg in Android 17; the palette and everything else is
-Showdist's own. It is an independent project and is not affiliated with
-Google or Android.
+The look is neon orange on black (or, in light mode, orange throughout):
+a flat wordmark, hairline measuring lines, and small diamonds for points and
+the reticle. It is an independent project and is not affiliated with Google
+or Android.
 
 ## Using it
 
-**Getting in.** Drag a finger through the twelve diamonds to connect them. The
-logo appears; hold it until the ring fills to launch. **Skip** in the corner
-goes straight to measuring.
+The app opens straight to a **main menu**: **Measurement** (the AR tape
+measure) and **Level** (a bubble level), with Settings one tap away, top
+right.
 
 **Measuring.**
 
@@ -41,14 +39,18 @@ The bottom row, left to right:
 | Diamond button, tap | Place a point at the reticle |
 | Diamond button, hold (0.8 s) | Save the measurement and start fresh |
 | Close | Clear all points without saving |
-| Gear | Open Settings |
 | M / FT | Metric or imperial display |
 
-Up to 24 points per measurement. Portrait only.
+Up to 24 points per measurement. Portrait only. The system back gesture/button
+returns to the main menu.
+
+**Level.** A bubble level using the accelerometer: lay the phone flat (screen
+up) on a surface. The diamond centres in the ring and the ring lights up when
+you're within 0.3° of flat; the readout below is the tilt in degrees.
 
 ## Settings
 
-Reached from the gear icon while measuring. Both choices are saved on device
+Reached from the gear icon on the main menu. Both choices are saved on device
 and restored on the next launch:
 
 - **Theme** — System (default), Light, or Dark. Both themes are neon orange:
@@ -152,8 +154,8 @@ flutter test
 ```
 
 The launcher icon (adaptive, with a themed monochrome layer, plus legacy icons
-and `docs/logo.png`) is rendered from the same painter as the in-app logo.
-After changing `lib/intro/logo_painter.dart`, regenerate it with:
+and `docs/logo.png`) is rendered from the same painter as the About screen's
+badge. After changing `lib/common/wordmark_painter.dart`, regenerate it with:
 
 ```sh
 flutter test tool/generate_icons.dart
@@ -173,10 +175,13 @@ Kotlin (android/app/src/main/kotlin/com/showconfigs/showdist/)
   BackgroundRenderer    camera image as a full-screen OpenGL quad
 
 Dart (lib/)
-  intro/                connect-the-diamonds gate, starfield, logo
+  menu/                 the main menu (Measurement / Level / Settings)
   measure/              AR screen, constellation painter, units, recordings,
-                        storage, sharing, the history screen and detail sheet
-tool/generate_icons.dart  renders the launcher icon from the in-app logo
+                        storage, sharing, the history screen and detail sheet,
+                        and the Settings screen
+  level/                the accelerometer-driven bubble level
+  common/               the diamond shape, the wordmark painter, Caption
+tool/generate_icons.dart  renders the launcher icon from the in-app wordmark
 ```
 
 Each camera frame the native side sends one flat `DoubleArray`. Anchor
@@ -217,11 +222,12 @@ draw above it.
   leaving selection first, opening a row, and Copy text reaching the clipboard
 - the measuring overlay: a distance label is drawn only when its segment's
   midpoint is on-screen, so no labels are stranded on the edges
-- the intro: connecting all twelve diamonds, hold to launch, an early release
-  that must not launch, and skip
+- the main menu: both tiles are present, Level opens the bubble level, the
+  gear opens Settings
 
-The native ARCore path (session start, hit testing, anchors, projection) has no
-automated tests, because it needs a real camera. Test it on a device.
+The native ARCore path (session start, hit testing, anchors, projection) and
+the Level screen's accelerometer reading have no automated tests, because
+both need real hardware. Test them on a device.
 
 ## Known limitations
 
@@ -240,6 +246,7 @@ automated tests, because it needs a real camera. Test it on a device.
 - `share_plus` is pinned to `^11.0.0`. Version 13 moves to `jni` native-asset
   build hooks, which is a heavier toolchain than a share sheet needs.
 - `shared_preferences` stores the Settings screen's theme and units choices.
+- `sensors_plus` reads the accelerometer for the Level screen.
 
 ## Design
 
@@ -270,10 +277,12 @@ app. Its zero is dotted by default; the app turns on the `zero` OpenType
 feature (`FontFeature.slashedZero()`) everywhere so 0/O and 1/l/I stay
 unmistakable.
 
-The diamond shape (`lib/common/diamond.dart`) is used for the intro ring,
-measuring points, the reticle, and the main button. Press coverage of the
-Android 17 easter egg describes its mechanics but not its exact colours, so
-the palette is an original interpretation rather than a copy.
+The diamond shape (`lib/common/diamond.dart`) marks measuring points, the
+reticle, the main button, and the level's bubble. The app icon and the About
+screen's badge (`lib/common/wordmark_painter.dart`) are a flat wordmark —
+"SHOW" in white over "DIST" in black, on Neon — sized to fit whichever icon
+layer it's rendered into (adaptive foreground, legacy, monochrome, or the
+full-bleed `docs/logo.png`).
 
 ## License
 

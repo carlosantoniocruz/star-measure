@@ -19,7 +19,6 @@ import 'history_screen.dart';
 import 'recording.dart';
 import 'recording_sheet.dart';
 import 'recording_store.dart';
-import 'settings_screen.dart';
 import 'units.dart';
 
 class MeasureScreen extends StatefulWidget {
@@ -195,12 +194,6 @@ class _MeasureScreenState extends State<MeasureScreen>
     );
   }
 
-  Future<void> _showSettings() {
-    return Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => SettingsScreen(settings: widget.settings)),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final palette = Palette.of(context);
@@ -313,12 +306,6 @@ class _MeasureScreenState extends State<MeasureScreen>
                                     icon: Icons.close_rounded,
                                     tooltip: 'Clear all points',
                                     onTap: hasPoints ? ArChannel.clear : null,
-                                    palette: palette,
-                                  ),
-                                  _IconAction(
-                                    icon: Icons.settings_outlined,
-                                    tooltip: 'Settings',
-                                    onTap: _showSettings,
                                     palette: palette,
                                   ),
                                   _UnitToggle(

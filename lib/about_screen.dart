@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'common/caption.dart';
-import 'intro/logo_painter.dart';
+import 'common/wordmark_painter.dart';
 import 'theme.dart';
 
 /// Keep in sync with pubspec.yaml's `version:` — Flutter has no built-in way
@@ -32,10 +32,15 @@ class AboutScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
         children: [
-          SizedBox(
-            width: 72,
-            height: 72,
-            child: CustomPaint(painter: LogoPainter(scale: 1, opacity: 1, time: 0, palette: palette)),
+          Center(
+            child: SizedBox(
+              width: 72,
+              height: 72,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: const CustomPaint(painter: WordmarkPainter()),
+              ),
+            ),
           ),
           const SizedBox(height: 20),
           Center(

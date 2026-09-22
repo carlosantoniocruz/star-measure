@@ -2,8 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'intro/egg_intro.dart';
-import 'measure/measure_screen.dart';
+import 'menu/main_menu_screen.dart';
 import 'settings.dart';
 import 'theme.dart';
 
@@ -47,18 +46,7 @@ class ShowdistApp extends StatelessWidget {
         theme: buildTheme(Brightness.light),
         darkTheme: buildTheme(Brightness.dark),
         themeMode: settings.themeMode,
-        home: Builder(
-          builder: (context) => EggIntro(
-            onLaunch: () => Navigator.of(context).pushReplacement(
-              PageRouteBuilder<void>(
-                transitionDuration: const Duration(milliseconds: 700),
-                pageBuilder: (_, _, _) => MeasureScreen(settings: settings),
-                transitionsBuilder: (_, animation, _, child) =>
-                    FadeTransition(opacity: animation, child: child),
-              ),
-            ),
-          ),
-        ),
+        home: MainMenuScreen(settings: settings),
       ),
     );
   }
