@@ -11,7 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../common/caption.dart';
 import '../settings.dart';
 import '../theme.dart';
-import 'ar_channel.dart';
+import 'ar_channel.dart' show ArChannel, arRouteObserver;
 import 'ar_frame.dart';
 import 'constellation_painter.dart';
 import 'history_screen.dart';
@@ -43,7 +43,7 @@ class _Problem {
 }
 
 class _MeasureScreenState extends State<MeasureScreen>
-    with WidgetsBindingObserver, TickerProviderStateMixin {
+    with WidgetsBindingObserver, RouteAware, TickerProviderStateMixin {
   final _frame = ValueNotifier<ArFrame>(ArFrame.empty);
   final _time = ValueNotifier<double>(0);
   late final Ticker _ticker = createTicker((d) => _time.value = d.inMicroseconds / 1e6);
@@ -77,8 +77,16 @@ class _MeasureScreenState extends State<MeasureScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<void>) arRouteObserver.subscribe(this, route);
+  }
+
+  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    arRouteObserver.unsubscribe(this);
     _sub?.cancel();
     ArChannel.stop();
     _ticker.dispose();
@@ -93,6 +101,15 @@ class _MeasureScreenState extends State<MeasureScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && (_problem?.retryOnResume ?? false)) _begin();
   }
+
+  /// Another route (History) was pushed on top of this one — pause the
+  /// session in place rather than tearing it down; points and anchors survive.
+  @override
+  void didPushNext() => ArChannel.pause();
+
+  /// Back from that route — resume where we left off.
+  @override
+  void didPopNext() => ArChannel.resume();
 
   Future<void> _begin() async {
     setState(() {

@@ -24,7 +24,7 @@ import io.flutter.plugin.common.MethodChannel
 /**
  * Owns the ARCore [Session] and bridges it to Dart.
  *
- * Method channel `ar_measure/ar`: start, stop, addPoint, undo, clear.
+ * Method channel `ar_measure/ar`: start, stop, pause, resume, addPoint, undo, clear.
  * Event channel `ar_measure/frames`: one DoubleArray per camera frame (see [ArMeasureView]).
  */
 class ArMeasureController(
@@ -62,6 +62,14 @@ class ArMeasureController(
             "start" -> result.success(start())
             "stop" -> {
                 stop()
+                result.success(null)
+            }
+            "pause" -> {
+                pauseAr()
+                result.success(null)
+            }
+            "resume" -> {
+                resumeAr()
                 result.success(null)
             }
             "addPoint" -> {
@@ -108,14 +116,21 @@ class ArMeasureController(
             activity.windowManager.defaultDisplay.rotation
         }
 
-    fun onActivityPause() {
+    fun onActivityPause() = pauseAr()
+
+    fun onActivityResume() {
+        if (active) resumeAr()
+    }
+
+    /** Also reachable from Dart directly (the "pause"/"resume" calls), for when the user
+     *  leaves the AR screen — covered by another route — without the Activity itself pausing. */
+    private fun pauseAr() {
         view?.onPause()
         synchronized(lock) { session?.pause() }
     }
 
-    fun onActivityResume() {
+    private fun resumeAr() {
         view?.onResume()
-        if (!active) return
         synchronized(lock) {
             try {
                 session?.resume()

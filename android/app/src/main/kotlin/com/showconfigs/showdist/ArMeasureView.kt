@@ -157,7 +157,10 @@ class ArMeasureView(
 
         val hit = if (tracking) bestHit(frame, width / 2f, height / 2f) else null
         if (addRequested.getAndSet(false) && hit != null && anchors.size < MAX_POINTS) {
-            anchors.add(hit.createAnchor())
+            // session.createAnchor, not hit.createAnchor: a plane hit's anchor would be
+            // attached to (and drift with) the plane's own pose as ARCore refines it in the
+            // seconds after placement. A session anchor is fixed in world space instead.
+            anchors.add(session.createAnchor(hit.hitPose))
         }
 
         val out = DoubleArray(HEADER + anchors.size * STRIDE)

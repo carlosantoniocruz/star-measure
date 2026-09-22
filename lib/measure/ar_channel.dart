@@ -1,6 +1,13 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'ar_frame.dart';
+
+/// Registered as a `MaterialApp` navigator observer; lets [MeasureScreen]
+/// (via `RouteAware`) tell when it's covered by another route — e.g. History
+/// pushed on top of it — versus fully closed, so it can pause the AR session
+/// in place rather than tearing it down.
+final arRouteObserver = RouteObserver<PageRoute<void>>();
 
 /// Thin wrapper over the native ARCore bridge in `ArMeasureController.kt`.
 abstract final class ArChannel {
@@ -20,6 +27,13 @@ abstract final class ArChannel {
       await _method.invokeMethod<String>('start') ?? 'error:no response';
 
   static Future<void> stop() => _method.invokeMethod<void>('stop');
+
+  /// Pauses (or resumes) the session in place — points and anchors survive —
+  /// for when the user leaves the AR screen without fully closing it, e.g.
+  /// by opening History on top of it.
+  static Future<void> pause() => _method.invokeMethod<void>('pause');
+  static Future<void> resume() => _method.invokeMethod<void>('resume');
+
   static Future<void> addPoint() => _method.invokeMethod<void>('addPoint');
   static Future<void> undo() => _method.invokeMethod<void>('undo');
   static Future<void> clear() => _method.invokeMethod<void>('clear');

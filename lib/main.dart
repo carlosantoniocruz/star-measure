@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'measure/ar_channel.dart' show arRouteObserver;
 import 'menu/main_menu_screen.dart';
 import 'settings.dart';
 import 'theme.dart';
@@ -44,6 +45,7 @@ class ShowdistApp extends StatelessWidget {
         title: 'Showdist',
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
+        navigatorObservers: [arRouteObserver],
         home: MainMenuScreen(settings: settings),
       ),
     );
