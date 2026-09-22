@@ -42,7 +42,9 @@ void main() {
     expect(find.text('HISTORY'), findsOneWidget);
     final y = [for (final t in ['3.00 m', '2.00 m', '1.00 m']) tester.getTopLeft(find.text(t)).dy];
     expect(y, orderedEquals([...y]..sort()), reason: 'newest at the top, scrolling down goes back in time');
-    expect(find.text('2 points · Sep 21, 12:30'), findsOneWidget);
+    // All three sample recordings have 2 points; the date used to make each
+    // row's subtitle unique, but dates aren't shown anymore.
+    expect(find.text('2 points'), findsNWidgets(3));
   });
 
   testWidgets('shows an empty state', (tester) async {
@@ -181,12 +183,11 @@ void main() {
     expect(find.text('Copied to clipboard'), findsOneWidget);
   });
 
-  testWidgets('the row share menu offers CSV, JSON and Copy text', (tester) async {
+  testWidgets('the row share menu offers Share .txt and Copy text', (tester) async {
     await pumpHistory(tester, items: [rec('a', 1, 10)]);
     await tester.tap(find.byTooltip('Share or copy'));
     await tester.pumpAndSettle();
-    expect(find.text('Share CSV'), findsOneWidget);
-    expect(find.text('Share JSON'), findsOneWidget);
+    expect(find.text('Share .txt'), findsOneWidget);
     expect(find.text('Copy text'), findsOneWidget);
   });
 }

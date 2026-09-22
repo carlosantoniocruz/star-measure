@@ -15,17 +15,17 @@ Future<void> performShareChoice(
 ) async {
   // Grab the messenger first: the sheet that triggered this may already be closed.
   final messenger = ScaffoldMessenger.of(context);
-  final format = choice.format;
+  final copying = choice == ShareChoice.copyText;
   try {
-    if (format == null) {
+    if (copying) {
       await copyRecordingText(recording, units);
       messenger.showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
     } else {
-      await shareRecording(recording, units, format);
+      await shareRecording(recording, units);
     }
   } catch (e) {
     messenger.showSnackBar(
-      SnackBar(content: Text('Could not ${format == null ? 'copy' : 'share'}: ${shareErrorMessage(e)}')),
+      SnackBar(content: Text('Could not ${copying ? 'copy' : 'share'}: ${shareErrorMessage(e)}')),
     );
   }
 }
@@ -37,8 +37,7 @@ class ShareMenuButton extends StatelessWidget {
   final ValueChanged<ShareChoice> onSelected;
 
   static IconData _icon(ShareChoice c) => switch (c) {
-        ShareChoice.csv => Icons.table_chart_outlined,
-        ShareChoice.json => Icons.data_object_rounded,
+        ShareChoice.shareText => Icons.ios_share_rounded,
         ShareChoice.copyText => Icons.content_copy_rounded,
       };
 
@@ -103,7 +102,7 @@ class RecordingSheet extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '${recording.points.length} points · ${segments.length} segments · ${formatStamp(recording.createdAt)}',
+                '${recording.points.length} points · ${segments.length} segments',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: palette.onSurfaceMuted, fontSize: 13),
               ),
@@ -129,23 +128,14 @@ class RecordingSheet extends StatelessWidget {
                   ),
                 ),
               const SizedBox(height: 18),
-              Row(
-                children: [
-                  for (final c in [ShareChoice.csv, ShareChoice.json]) ...[
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => onChoice(c),
-                        icon: const Icon(Icons.ios_share_rounded, size: 18),
-                        label: Text(c.label),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: palette.onSurface,
-                          side: BorderSide(color: palette.onSurface.withValues(alpha: 0.3)),
-                        ),
-                      ),
-                    ),
-                    if (c == ShareChoice.csv) const SizedBox(width: 12),
-                  ],
-                ],
+              OutlinedButton.icon(
+                onPressed: () => onChoice(ShareChoice.shareText),
+                icon: const Icon(Icons.ios_share_rounded, size: 18),
+                label: Text(ShareChoice.shareText.label),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: palette.onSurface,
+                  side: BorderSide(color: palette.onSurface.withValues(alpha: 0.3)),
+                ),
               ),
               const SizedBox(height: 4),
               TextButton.icon(

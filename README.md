@@ -4,8 +4,8 @@
 
 An augmented-reality tape measure for Android, built with Flutter and ARCore.
 Point the camera at a surface, tap to drop points, and read off the distances.
-Measurements can be saved on the device, browsed in a history, and exported as
-CSV or JSON through the Android share sheet, or copied as text.
+Measurements can be saved on the device, browsed in a history, and shared as
+a plain-text file through the Android share sheet, or copied as text.
 
 The look is neon orange on black in Dark, and a medium grey with dark-orange
 accents in Light: hairline measuring lines, small dots for points and the
@@ -79,8 +79,8 @@ renamed to `recordings.json.corrupt` rather than overwritten.
 ### History
 
 The history button opens every saved measurement, newest first. Scroll down to
-go further back; each row shows the total, the point count, the time, and a
-small sketch of its shape. The back arrow returns to measuring.
+go further back; each row shows the total, the point count, and a small
+sketch of its shape — no date. The back arrow returns to measuring.
 
 - **Tap** a row to see every segment and share or copy it.
 - **Long-press** a row, or choose **Select** from the menu, to select several.
@@ -90,49 +90,33 @@ small sketch of its shape. The back arrow returns to measuring.
 
 ### Sharing and copying
 
-Each measurement has three actions, in the save sheet, the detail sheet, and the
+Each measurement has two actions, in the save sheet, the detail sheet, and the
 share menu on each history row:
 
-- **Share CSV** and **Share JSON** write a file and hand it to the Android share
-  sheet, so it can go to Drive, email, chat, or any other app that accepts files.
-  The share also carries the total and every segment length as plain text, for
-  apps that ignore attachments.
-- **Copy text** puts that plain-text summary on the clipboard:
+- **Share .txt** writes a plain-text file and hands it to the Android share
+  sheet — the standard system picker of whatever's installed (Drive, email,
+  chat, notes, anything that accepts a file). The share also carries the same
+  text directly, for apps that show only the message and drop the attachment.
+- **Copy text** puts that same plain-text summary on the clipboard.
 
-  ```
-  Showdist: 17.00 m
-  3 points, 2 segments · Sep 21, 16:40
-  1. 5.00 m
-  2. 12.00 m
-  ```
-
-**CSV** has one row per segment and a final total row:
+Both produce the same text — the total and every segment, no date or
+timestamp:
 
 ```
-recorded_at,segment,from_point,to_point,length_m,length_display,x1_m,y1_m,z1_m,x2_m,y2_m,z2_m
+Showdist: 17.00 m
+3 points, 2 segments
+1. 5.00 m
+2. 12.00 m
 ```
 
-`length_display` is formatted in whichever unit system is selected when you
-share. `length_m` is always metres.
+Recordings longer than 20 segments are truncated in the text, with a note
+pointing at the attached file for the rest.
 
-**JSON** carries the same data as structured fields:
-
-```json
-{
-  "app": "Showdist",
-  "recorded_at": "2026-09-21T16:40:05.000",
-  "unit_system": "metric",
-  "total_m": 17.0,
-  "total_display": "17.00 m",
-  "coordinates": "ARCore world space, metres; origin is where the AR session started",
-  "points":   [{ "index": 1, "x": 0.0, "y": 0.0, "z": 0.0 }],
-  "segments": [{ "index": 1, "from": 1, "to": 2, "length_m": 5.0, "length_display": "5.00 m" }]
-}
-```
-
-Coordinates are in ARCore's world space. They describe the shape and the
-distances accurately relative to each other, but the origin is wherever the AR
-session started, so they are not a position in the room or on a map.
+Measurements are still ordered newest-first in the app and recorded with an
+internal timestamp for storage, but that timestamp isn't shown anywhere or
+included in what's shared — only the shared `.txt` file's name carries one
+(e.g. `showdist-20260921-164005.txt`), so repeated exports don't overwrite
+each other.
 
 ## Requirements
 
@@ -216,12 +200,12 @@ draw above it.
 
 ## Testing
 
-`flutter test` runs 60 tests:
+`flutter test` runs 55 tests:
 
 - unit formatting (metric and imperial)
 - decoding the native frame payload, including truncated payloads
-- segment and total maths, CSV and JSON export, CSV escaping, the plain-text
-  summary, and the folder exports are written to
+- segment and total maths, the plain-text summary (and its truncation past
+  20 segments), and the folder exports are written to
 - the recording store: persistence, ordering, removing some or all, change
   notifications, and a corrupt save file
 - the history thumbnails (how a 3D measurement is flattened)

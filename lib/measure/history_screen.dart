@@ -225,7 +225,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         style: TextStyle(color: palette.onBase, fontSize: 20, fontWeight: FontWeight.w300),
       ),
       subtitle: Text(
-        '${r.points.length} points · ${formatStamp(r.createdAt)}',
+        '${r.points.length} points',
         style: TextStyle(color: palette.onBaseMuted, fontSize: 12),
       ),
       trailing: _selecting
