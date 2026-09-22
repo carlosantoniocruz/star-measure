@@ -12,16 +12,30 @@ Future<void> performShareChoice(
   Recording recording,
   UnitSystem units,
   ShareChoice choice,
+) =>
+    performBulkShareChoice(context, [recording], units, choice);
+
+/// [performShareChoice] for several recordings at once: one combined .txt
+/// file, or one combined block of text on the clipboard.
+Future<void> performBulkShareChoice(
+  BuildContext context,
+  List<Recording> recordings,
+  UnitSystem units,
+  ShareChoice choice,
 ) async {
   // Grab the messenger first: the sheet that triggered this may already be closed.
   final messenger = ScaffoldMessenger.of(context);
   final copying = choice == ShareChoice.copyText;
   try {
     if (copying) {
-      await copyRecordingText(recording, units);
+      if (recordings.length == 1) {
+        await copyRecordingText(recordings.single, units);
+      } else {
+        await copyRecordingsText(recordings, units);
+      }
       messenger.showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
     } else {
-      await shareRecording(recording, units);
+      await shareRecordings(recordings, units);
     }
   } catch (e) {
     messenger.showSnackBar(
@@ -32,9 +46,10 @@ Future<void> performShareChoice(
 
 /// Overflow menu with every [ShareChoice].
 class ShareMenuButton extends StatelessWidget {
-  const ShareMenuButton({super.key, required this.onSelected});
+  const ShareMenuButton({super.key, required this.onSelected, this.enabled = true});
 
   final ValueChanged<ShareChoice> onSelected;
+  final bool enabled;
 
   static IconData _icon(ShareChoice c) => switch (c) {
         ShareChoice.shareText => Icons.ios_share_rounded,
@@ -45,7 +60,8 @@ class ShareMenuButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<ShareChoice>(
       tooltip: 'Share or copy',
-      icon: const Icon(Icons.ios_share_rounded, color: Palette.white, size: 22),
+      enabled: enabled,
+      icon: Icon(Icons.ios_share_rounded, color: enabled ? Palette.white : Palette.warmGray, size: 22),
       color: Palette.darkTyrianBlue,
       onSelected: onSelected,
       itemBuilder: (_) => [

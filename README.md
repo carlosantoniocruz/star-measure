@@ -14,9 +14,11 @@ independent project and is not affiliated with Google or Android.
 ## Using it
 
 The app opens straight to a **main menu**: the SHOWDIST wordmark at the top,
-then two tools — **Measure** and **Leveler** — as large bordered cards,
-Measure the more prominent of the two. Static ruler tick marks run along the
-bottom edge. About and Settings are one tap away, top-left and top-right.
+then two tools — **Measure** and **Leveler** — as compact bordered cards,
+Measure the more prominent of the two. Just beneath Measure, **History**
+(with a count of saved measurements) opens the saved list directly, without
+starting the camera. Static ruler tick marks run along the bottom edge.
+Settings is one tap away, top-right; About is inside Settings.
 
 The AR session doesn't start until you actually tap Measure — opening the
 main menu never touches the camera.
@@ -63,11 +65,9 @@ Reached from the gear icon on the main menu.
   Metric, saved on device and restored on the next launch. The same setting
   drives the in-AR M/FT toggle.
 
-**About**, also reached from the settings screen, shows the app name,
-version, a quick-start guide for each tool, a developer section, a licenses
-page (Flutter, ARCore, and the bundled JetBrains Mono font), and a contact
-email (selectable, to copy). It's also reachable directly from the main
-menu's info icon, top-left.
+**About**, reached from the settings screen, shows the version, a developer
+section, a licenses page (Flutter, ARCore, and the bundled JetBrains Mono
+font), and a contact email (selectable, to copy).
 
 ## Saving and exporting
 
@@ -77,14 +77,16 @@ renamed to `recordings.json.corrupt` rather than overwritten.
 
 ### History
 
-The history button opens every saved measurement, newest first. Scroll down to
-go further back; each row shows the total, the point count, and a small
-sketch of its shape — no date. The back arrow returns to measuring.
+History — from the main menu, under Measure, or from the history button while
+measuring — shows every saved measurement, newest first. Scroll down to go
+further back; each row shows the total, the point count, and a small sketch
+of its shape — no date. The back arrow returns to wherever you came from.
 
 - **Tap** a row to see every segment and share or copy it.
 - **Long-press** a row, or choose **Select** from the menu, to select several.
-  Tap rows to add or remove them, or use **Select all**. The bin deletes the
-  selection. Back cancels selection first.
+  Tap rows to add or remove them, or use **Select all**. The share button
+  exports the whole selection at once — **Share .txt** as a single file, or
+  **Copy text** — and the bin deletes it. Back cancels selection first.
 - **Delete all** is in the menu. Every delete asks for confirmation first.
 
 ### Sharing and copying
@@ -97,6 +99,10 @@ share menu on each history row:
   chat, notes, anything that accepts a file). The share also carries the same
   text directly, for apps that show only the message and drop the attachment.
 - **Copy text** puts that same plain-text summary on the clipboard.
+
+A bulk export from History's selection is one document: a count, then each
+measurement's date and time followed by its total and every segment, newest
+first.
 
 Both produce the same text — the total and every segment, no date or
 timestamp:
@@ -164,8 +170,8 @@ Kotlin (android/app/src/main/kotlin/com/showconfigs/showdist/)
   BackgroundRenderer    camera image as a full-screen OpenGL quad
 
 Dart (lib/)
-  menu/                 the main menu (Measure / Leveler tool cards, About /
-                        Settings icons, the static ruler ticks)
+  menu/                 the main menu (Measure / Leveler tool cards, the History
+                        link under Measure, the Settings icon, the ruler ticks)
   measure/              AR screen, constellation painter, units, recordings,
                         storage, sharing, the history screen and detail sheet,
                         and the Settings screen
@@ -214,7 +220,9 @@ draw above it.
 - the measuring overlay: a distance label is drawn only when its segment's
   midpoint is on-screen, so no labels are stranded on the edges
 - the main menu: both tool cards are present, Leveler opens the bubble
-  level, the gear opens Settings
+  level, the gear opens Settings, there's no About icon, and History sits
+  under Measure with a live count
+- bulk export: the combined text, and History's selection share/copy
 
 The native ARCore path (session start, hit testing, anchors, projection) and
 the Level screen's accelerometer reading have no automated tests, because
@@ -297,12 +305,13 @@ foreground of three `seaGreen` dots in a triangle around a white centre dot —
 the same reticle motif as the AR overlay. A monochrome layer (the same dots,
 single-coloured) supports Android 13+ themed icons.
 The **SHOWDIST wordmark** — one word, all caps, `lightMauve` — sits at the
-top of the main menu. Below it, **Measure** and **Leveler** are large
+top of the main menu. Below it, **Measure** and **Leveler** are compact
 bordered cards (`peachRed` and `olympicBlue` respectively), Measure the
-larger and more strongly tinted of the two, each filling its share of the
-remaining space rather than leaving it empty. Static ruler tick marks —
-`darkCitrine`, no animation — run along the very bottom edge, pointing
-upward, like a tape measure's edge.
+larger and more strongly tinted of the two, centred in the space between the
+wordmark and the ruler. **History** hangs off Measure on a thin `peachRed`
+rule, indented, so it reads as part of Measure rather than a third tool.
+Static ruler tick marks — `darkCitrine`, no animation — rise from a baseline
+set just above the bottom edge, like a tape measure's edge.
 
 ## License
 

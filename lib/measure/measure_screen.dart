@@ -21,9 +21,12 @@ import 'recording_store.dart';
 import 'units.dart';
 
 class MeasureScreen extends StatefulWidget {
-  const MeasureScreen({super.key, required this.settings});
+  const MeasureScreen({super.key, required this.settings, required this.store});
 
   final AppSettings settings;
+
+  /// Saved measurements — shared with the main menu, which owns it.
+  final RecordingStore store;
 
   @override
   State<MeasureScreen> createState() => _MeasureScreenState();
@@ -61,7 +64,6 @@ class _MeasureScreenState extends State<MeasureScreen>
     });
 
   StreamSubscription<ArFrame>? _sub;
-  RecordingStore? _store;
   _Problem? _problem;
   bool _running = false;
 
@@ -70,9 +72,6 @@ class _MeasureScreenState extends State<MeasureScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _ticker.start();
-    RecordingStore.open().then((s) {
-      if (mounted) setState(() => _store = s);
-    });
     _begin();
   }
 
@@ -93,7 +92,6 @@ class _MeasureScreenState extends State<MeasureScreen>
     _charge.dispose();
     _frame.dispose();
     _time.dispose();
-    _store?.dispose();
     super.dispose();
   }
 
@@ -200,13 +198,10 @@ class _MeasureScreenState extends State<MeasureScreen>
   Future<void> _record() async {
     final points = _frame.value.points;
     if (points.length < 2) return;
-    final store = _store;
-    if (store == null) return;
-
     HapticFeedback.mediumImpact();
     final recording = Recording.fromPoints(points);
     await ArChannel.clear();
-    await store.add(recording);
+    await widget.store.add(recording);
     if (!mounted) return;
     await _showSaved(recording);
   }
@@ -230,10 +225,10 @@ class _MeasureScreenState extends State<MeasureScreen>
   }
 
   Future<void> _showHistory() {
-    final store = _store;
-    if (store == null) return Future.value();
     return Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => HistoryScreen(store: store, units: widget.settings.units)),
+      MaterialPageRoute<void>(
+        builder: (_) => HistoryScreen(store: widget.store, units: widget.settings.units),
+      ),
     );
   }
 
@@ -322,12 +317,12 @@ class _MeasureScreenState extends State<MeasureScreen>
                                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                   children: [
                                     ListenableBuilder(
-                                      listenable: _store ?? _time,
+                                      listenable: widget.store,
                                       builder: (context, _) => _IconAction(
                                         icon: Icons.history_rounded,
                                         tooltip: 'History',
-                                        badge: _store?.items.length ?? 0,
-                                        onTap: _store == null ? null : _showHistory,
+                                        badge: widget.store.items.length,
+                                        onTap: _showHistory,
                                       ),
                                     ),
                                     _IconAction(

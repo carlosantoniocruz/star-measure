@@ -5,11 +5,13 @@ import '../theme.dart';
 import 'recording.dart';
 import 'recording_sheet.dart';
 import 'recording_store.dart';
+import 'share_recording.dart';
 import 'shape_outline.dart';
 import 'units.dart';
 
 /// Every saved measurement, newest first. Scroll down to go further back.
-/// Long-press a row (or use the menu) to select; delete the selection or everything.
+/// Long-press a row (or use the menu) to select; share, copy, or delete the
+/// selection, or delete everything.
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key, required this.store, required this.units});
 
@@ -80,6 +82,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (!mounted) return;
     _exitSelecting();
     await widget.store.clear();
+  }
+
+  /// The selection as one .txt file or one block of copied text, in list
+  /// order (newest first).
+  void _shareSelected(ShareChoice choice) {
+    final picked = widget.store.items.where((r) => _selected.contains(r.id)).toList();
+    if (picked.isEmpty) return;
+    performBulkShareChoice(context, picked, widget.units, choice);
   }
 
   Future<void> _open(Recording r) {
@@ -178,6 +188,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ..clear()
                           ..addAll(items.map((r) => r.id))),
                   ),
+                  ShareMenuButton(enabled: _selected.isNotEmpty, onSelected: _shareSelected),
                   IconButton(
                     tooltip: 'Delete selected',
                     icon: const Icon(Icons.delete_outline_rounded),
