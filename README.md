@@ -1,7 +1,5 @@
 # Showdist
 
-<p align="center"><img src="docs/logo.png" width="160" alt="Showdist logo"></p>
-
 An augmented-reality tape measure for Android, built with Flutter and ARCore.
 Point the camera at a surface, tap to drop points, and read off the distances.
 Measurements can be saved on the device, browsed in a history, and shared as
@@ -10,15 +8,18 @@ a plain-text file through the Android share sheet, or copied as text.
 The look is one fixed dark-navy theme, drawn from Sanzo Wada's *A Dictionary
 of Color Combinations* — no light/dark switching, no system-theme following:
 hairline measuring lines in peachRed, a seaGreen aiming reticle, small dots
-for points, and static ruler tick marks along the bottom edge. It is an
+for points, and slowly drifting ruler tick marks along the bottom edge. It is an
 independent project and is not affiliated with Google or Android.
 
 ## Using it
 
 The app opens straight to a **main menu**: the SHOWDIST wordmark at the top,
-then two tools — **Measure** and **Leveler** — as large bordered cards,
-Measure the more prominent of the two. Static ruler tick marks run along the
-bottom edge. About and Settings are one tap away, top-left and top-right.
+then two tools — **Measure** and **Leveler** — as compact bordered cards,
+Measure the more prominent of the two. Just beneath Measure, **History**
+(with a count of saved measurements) opens the saved list directly, without
+starting the camera. Ruler tick marks drift slowly rightward along the bottom
+edge.
+Settings is one tap away, top-right; About is inside Settings.
 
 The AR session doesn't start until you actually tap Measure — opening the
 main menu never touches the camera.
@@ -65,11 +66,9 @@ Reached from the gear icon on the main menu.
   Metric, saved on device and restored on the next launch. The same setting
   drives the in-AR M/FT toggle.
 
-**About**, also reached from the settings screen, shows the app name,
-version, a quick-start guide for each tool, a developer section, a licenses
-page (Flutter, ARCore, and the bundled JetBrains Mono font), and a contact
-email (selectable, to copy). It's also reachable directly from the main
-menu's info icon, top-left.
+**About**, reached from the settings screen, shows the version, a Developer
+section with the developer's contact email (selectable, to copy), and a
+licenses page (Flutter, ARCore, and the bundled JetBrains Mono font).
 
 ## Saving and exporting
 
@@ -79,14 +78,16 @@ renamed to `recordings.json.corrupt` rather than overwritten.
 
 ### History
 
-The history button opens every saved measurement, newest first. Scroll down to
-go further back; each row shows the total, the point count, and a small
-sketch of its shape — no date. The back arrow returns to measuring.
+History — from the main menu, under Measure, or from the history button while
+measuring — shows every saved measurement, newest first. Scroll down to go
+further back; each row shows the total, the point count, and a small sketch
+of its shape — no date. The back arrow returns to wherever you came from.
 
 - **Tap** a row to see every segment and share or copy it.
 - **Long-press** a row, or choose **Select** from the menu, to select several.
-  Tap rows to add or remove them, or use **Select all**. The bin deletes the
-  selection. Back cancels selection first.
+  Tap rows to add or remove them, or use **Select all**. The share button
+  exports the whole selection at once — **Share .txt** as a single file, or
+  **Copy text** — and the bin deletes it. Back cancels selection first.
 - **Delete all** is in the menu. Every delete asks for confirmation first.
 
 ### Sharing and copying
@@ -99,6 +100,10 @@ share menu on each history row:
   chat, notes, anything that accepts a file). The share also carries the same
   text directly, for apps that show only the message and drop the attachment.
 - **Copy text** puts that same plain-text summary on the clipboard.
+
+A bulk export from History's selection is one document: a count, then each
+measurement's date and time followed by its total and every segment, newest
+first.
 
 Both produce the same text — the total and every segment, no date or
 timestamp:
@@ -146,13 +151,11 @@ flutter analyze
 flutter test
 ```
 
-The launcher icon (adaptive, with a themed monochrome layer, plus legacy icons
-and `docs/logo.png`) is rendered from the same painter as the About screen's
-badge. After changing `lib/common/tick_ring_painter.dart`, regenerate it with:
-
-```sh
-flutter test tool/generate_icons.dart
-```
+The launcher icon is a set of Android vector drawables, not a Flutter-rendered
+asset — see `android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
+(adaptive: background/foreground/monochrome) and `mipmap-anydpi-v21/ic_launcher.xml`
+(a flattened fallback for API 24-25, which predate adaptive icons). Edit the
+`drawable/ic_launcher_*.xml` files directly; there's no generation step.
 
 ## How it works
 
@@ -168,15 +171,15 @@ Kotlin (android/app/src/main/kotlin/com/showconfigs/showdist/)
   BackgroundRenderer    camera image as a full-screen OpenGL quad
 
 Dart (lib/)
-  menu/                 the main menu (Measure / Leveler tool cards, About /
-                        Settings icons, the static ruler ticks)
+  menu/                 the main menu (Measure / Leveler tool cards, the History
+                        link under Measure, the Settings icon, the ruler ticks)
   measure/              AR screen, constellation painter, units, recordings,
                         storage, sharing, the history screen and detail sheet,
                         and the Settings screen
   level/                the accelerometer-driven bubble level
-  common/               the tick-ring painter, Caption
-  about_screen.dart     app info, per-tool quick start, developer section
-tool/generate_icons.dart  renders the launcher icon from the in-app tick ring
+  common/               Caption
+  about_screen.dart     app info: version, developer email, licenses
+  licenses_screen.dart  a themed licenses screen, walking LicenseRegistry directly
 ```
 
 Each camera frame the native side sends one flat `DoubleArray`. Anchor
@@ -218,7 +221,9 @@ draw above it.
 - the measuring overlay: a distance label is drawn only when its segment's
   midpoint is on-screen, so no labels are stranded on the edges
 - the main menu: both tool cards are present, Leveler opens the bubble
-  level, the gear opens Settings
+  level, the gear opens Settings, there's no About icon, and History sits
+  under Measure with a live count
+- bulk export: the combined text, and History's selection share/copy
 
 The native ARCore path (session start, hit testing, anchors, projection) and
 the Level screen's accelerometer reading have no automated tests, because
@@ -253,7 +258,7 @@ constants drawn from Sanzo Wada's *A Dictionary of Color Combinations*:
 | --- | --- | --- |
 | `darkTyrianBlue` | `#12354E` | Main background — landing, settings, licences |
 | `olympicBlue` | `#5A82B3` | Secondary accents — selection/toggle state |
-| `lightMauve` | `#9A72AA` | The wordmark and large headings |
+| `lightMauve` | `#9A72AA` | The wordmark and large headings; the launch screen |
 | `darkCitrine` | `#8B835B` | Small decorative details — the main menu's ruler ticks |
 | `peachRed` | `#F15A30` | Actions — the capture button, placed measurement points |
 | `seaGreen` | `#00B49B` | Live/tracking elements — reticle dots, the leveler liquid |
@@ -294,17 +299,28 @@ feature (`FontFeature.slashedZero()`) everywhere so 0/O and 1/l/I stay
 unmistakable.
 
 Small filled circles — not diamonds — mark measuring points, the reticle, the
-main button, and the level's bubble. The **app icon** (and the About screen's
-badge, `lib/common/tick_ring_painter.dart`) has no lettering at all:
-a `darkTyrianBlue` field, a `peachRed` ring, and `darkTyrianBlue` tick marks
-notched across it at regular intervals, like a gauge dial.
+main button, and the level's bubble. The **app icon** is an Android adaptive
+icon built from plain vector drawables (`android/app/src/main/res/drawable/
+ic_launcher_*.xml`), no lettering: a `darkTyrianBlue` background, and a
+foreground of three `seaGreen` dots in a triangle around a white centre dot —
+the same reticle motif as the AR overlay. A monochrome layer (the same dots,
+single-coloured) supports Android 13+ themed icons.
 The **SHOWDIST wordmark** — one word, all caps, `lightMauve` — sits at the
-top of the main menu. Below it, **Measure** and **Leveler** are large
+top of the main menu. Below it, **Measure** and **Leveler** are compact
 bordered cards (`peachRed` and `olympicBlue` respectively), Measure the
-larger and more strongly tinted of the two, each filling its share of the
-remaining space rather than leaving it empty. Static ruler tick marks —
-`darkCitrine`, no animation — run along the very bottom edge, pointing
-upward, like a tape measure's edge.
+larger and more strongly tinted of the two, centred in the space between the
+wordmark and the ruler. **History** hangs off Measure on a thin `peachRed`
+rule, indented, so it reads as part of Measure rather than a third tool.
+Ruler tick marks — `darkCitrine`, bold strokes — rise from a baseline set
+just above the bottom edge, like a tape measure's edge, and drift slowly to
+the right (about 10 px/s, looping seamlessly every major tick); they hold
+still when the system's reduce-motion setting is on.
+
+The **launch screen** is a plain `lightMauve` field — the wordmark's colour —
+on every Android version: `drawable/launch_background.xml` before Android 12,
+`windowSplashScreenBackground` (with the app icon on it) from Android 12 on
+(`values-v31/styles.xml`), and the same colour behind Flutter while it starts,
+so nothing flashes white.
 
 ## License
 

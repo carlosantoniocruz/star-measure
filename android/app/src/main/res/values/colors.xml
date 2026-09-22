@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- lightMauve (lib/theme.dart), the main menu's SHOWDIST wordmark colour:
+         the launch screen and the window behind Flutter while it starts. -->
+    <color name="launch_background">#9A72AA</color>
+</resources>

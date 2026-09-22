@@ -1,4 +1,8 @@
+import 'package:showdist/about_screen.dart';
 import 'package:showdist/level/level_screen.dart';
+import 'package:showdist/measure/history_screen.dart';
+import 'package:showdist/measure/recording.dart';
+import 'package:showdist/measure/recording_store.dart';
 import 'package:showdist/menu/main_menu_screen.dart';
 import 'package:showdist/settings.dart';
 import 'package:showdist/theme.dart';
@@ -15,7 +19,7 @@ void main() {
   testWidgets('shows Measure and Leveler tiles', (tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: buildTheme(),
-      home: MainMenuScreen(settings: await settings()),
+      home: MainMenuScreen(settings: await settings(), store: RecordingStore.inMemory()),
     ));
     expect(find.text('MEASURE'), findsOneWidget);
     expect(find.text('LEVELER'), findsOneWidget);
@@ -24,7 +28,7 @@ void main() {
   testWidgets('Leveler opens the bubble level, reading level before any tilt', (tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: buildTheme(),
-      home: MainMenuScreen(settings: await settings()),
+      home: MainMenuScreen(settings: await settings(), store: RecordingStore.inMemory()),
     ));
     await tester.tap(find.text('LEVELER'));
     await tester.pumpAndSettle();
@@ -37,11 +41,76 @@ void main() {
   testWidgets('the gear icon opens Settings', (tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: buildTheme(),
-      home: MainMenuScreen(settings: await settings()),
+      home: MainMenuScreen(settings: await settings(), store: RecordingStore.inMemory()),
     ));
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     expect(find.text('UNITS'), findsOneWidget);
     expect(find.text('About'), findsOneWidget);
+  });
+
+  testWidgets('no About icon on the menu; About lives in Settings', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTheme(),
+      home: MainMenuScreen(settings: await settings(), store: RecordingStore.inMemory()),
+    ));
+    expect(find.byTooltip('About'), findsNothing);
+    expect(find.byIcon(Icons.info_outline_rounded), findsNothing);
+  });
+
+  testWidgets('History under Measure shows the saved count and opens History', (tester) async {
+    final store = RecordingStore.inMemory([
+      for (final id in ['a', 'b'])
+        Recording(id: id, createdAt: DateTime(2026, 9, 22), points: const [Vec3(0, 0, 0), Vec3(1, 0, 0)]),
+    ]);
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTheme(),
+      home: MainMenuScreen(settings: await settings(), store: store),
+    ));
+    expect(find.text('HISTORY'), findsOneWidget);
+    expect(find.text('2 saved'), findsOneWidget);
+    // Below Measure, above Leveler.
+    final y = tester.getCenter(find.text('HISTORY')).dy;
+    expect(y, greaterThan(tester.getCenter(find.text('MEASURE')).dy));
+    expect(y, lessThan(tester.getCenter(find.text('LEVELER')).dy));
+
+    await store.remove('a');
+    await tester.pump();
+    expect(find.text('1 saved'), findsOneWidget);
+
+    await tester.tap(find.text('HISTORY'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HistoryScreen), findsOneWidget);
+  });
+
+  testWidgets('the ruler keeps drifting, unless reduced motion is on', (tester) async {
+    final s = await settings();
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTheme(),
+      home: MainMenuScreen(settings: s, store: RecordingStore.inMemory()),
+    ));
+    await tester.pump(const Duration(seconds: 1));
+    expect(tester.binding.hasScheduledFrame, isTrue);
+
+    await tester.pumpWidget(MediaQuery(
+      data: const MediaQueryData(disableAnimations: true),
+      child: MaterialApp(
+        theme: buildTheme(),
+        home: MainMenuScreen(settings: s, store: RecordingStore.inMemory()),
+      ),
+    ));
+    await tester.pump();
+    expect(tester.binding.hasScheduledFrame, isFalse);
+  });
+
+  testWidgets('About: Developer shows just the email; no separate Contact', (tester) async {
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const AboutScreen()));
+    expect(find.text('DEVELOPER'), findsOneWidget);
+    expect(find.text('sh.run.configs@gmail.com'), findsOneWidget);
+    expect(find.text('Contact'), findsNothing);
+    expect(
+      tester.getTopLeft(find.text('sh.run.configs@gmail.com')).dy,
+      greaterThan(tester.getTopLeft(find.text('DEVELOPER')).dy),
+    );
   });
 }

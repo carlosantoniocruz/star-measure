@@ -190,4 +190,45 @@ void main() {
     expect(find.text('Share .txt'), findsOneWidget);
     expect(find.text('Copy text'), findsOneWidget);
   });
+
+  testWidgets('selection bulk-copies every picked measurement, newest first', (tester) async {
+    final copied = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied.add((call.arguments as Map)['text'] as String);
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+
+    await pumpHistory(tester);
+    await tester.longPress(find.text('1.00 m'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('3.00 m'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 selected'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Share or copy'));
+    await tester.pumpAndSettle();
+    expect(find.text('Share .txt'), findsOneWidget);
+    await tester.tap(find.text('Copy text'));
+    await tester.pumpAndSettle();
+
+    expect(copied, hasLength(1));
+    final text = copied.single;
+    expect(text, startsWith('Showdist: 2 measurements'));
+    expect(text, isNot(contains('2.00 m')), reason: 'b was not picked');
+    expect(text.indexOf('3.00 m'), lessThan(text.indexOf('1.00 m')), reason: 'newest first');
+    expect(find.text('Copied to clipboard'), findsOneWidget);
+  });
+
+  testWidgets('bulk share is disabled until something is picked', (tester) async {
+    await pumpHistory(tester);
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Select'));
+    await tester.pumpAndSettle();
+    final button = tester.widget<PopupMenuButton<Object?>>(
+      find.ancestor(of: find.byTooltip('Share or copy'), matching: find.byWidgetPredicate((w) => w is PopupMenuButton)),
+    );
+    expect(button.enabled, isFalse);
+  });
 }

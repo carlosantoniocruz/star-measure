@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'measure/ar_channel.dart' show arRouteObserver;
+import 'measure/recording_store.dart';
 import 'menu/main_menu_screen.dart';
 import 'settings.dart';
 import 'theme.dart';
@@ -12,11 +14,13 @@ void main() async {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   _registerFontLicense();
   final settings = await AppSettings.load();
-  runApp(ShowdistApp(settings: settings));
+  final store = await RecordingStore.open();
+  runApp(ShowdistApp(settings: settings, store: store));
 }
 
 /// JetBrains Mono is bundled under the OFL-1.1; this makes its license show
-/// up in the standard Flutter "View licenses" page (reached from About).
+/// up on the app's own licenses screen (`lib/licenses_screen.dart`, reached
+/// from About), alongside every package's own registered license.
 void _registerFontLicense() {
   LicenseRegistry.addLicense(() async* {
     yield const LicenseEntryWithLineBreaks(['JetBrains Mono'], _jetBrainsMonoOfl);
@@ -32,9 +36,10 @@ Full license text: assets/fonts/JetBrainsMono/OFL.txt
 ''';
 
 class ShowdistApp extends StatelessWidget {
-  const ShowdistApp({super.key, required this.settings});
+  const ShowdistApp({super.key, required this.settings, required this.store});
 
   final AppSettings settings;
+  final RecordingStore store;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +49,8 @@ class ShowdistApp extends StatelessWidget {
         title: 'Showdist',
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
-        home: MainMenuScreen(settings: settings),
+        navigatorObservers: [arRouteObserver],
+        home: MainMenuScreen(settings: settings, store: store),
       ),
     );
   }

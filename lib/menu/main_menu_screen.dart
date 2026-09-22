@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 
-import '../about_screen.dart';
 import '../level/level_screen.dart';
+import '../measure/history_screen.dart';
 import '../measure/measure_screen.dart';
+import '../measure/recording_store.dart';
 import '../measure/settings_screen.dart';
 import '../settings.dart';
 import '../theme.dart';
 
-/// The app's home screen: the SHOWDIST wordmark, then Measure and Leveler.
-/// About and Settings are one tap away, top corners; static ruler ticks run
-/// along the bottom edge.
+/// The app's home screen: the SHOWDIST wordmark, then Measure — with its
+/// History sub-menu just beneath — and Leveler. Settings (and About, inside
+/// it) is one tap away, top right; ruler ticks drift slowly rightward along
+/// the bottom edge.
 class MainMenuScreen extends StatelessWidget {
-  const MainMenuScreen({super.key, required this.settings});
+  const MainMenuScreen({super.key, required this.settings, required this.store});
 
   final AppSettings settings;
 
-  static const _tickBandHeight = 48.0;
+  /// Saved measurements, shared with Measure and History.
+  final RecordingStore store;
+
+  static const _tickBandHeight = 92.0;
 
   @override
   Widget build(BuildContext context) {
@@ -30,18 +35,7 @@ class MainMenuScreen extends StatelessWidget {
               right: 0,
               bottom: 0,
               height: _tickBandHeight,
-              child: CustomPaint(painter: _RulerPainter()),
-            ),
-            Positioned(
-              top: 4,
-              left: 4,
-              child: IconButton(
-                tooltip: 'About',
-                icon: const Icon(Icons.info_outline_rounded, color: Palette.warmGray),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const AboutScreen()),
-                ),
-              ),
+              child: _Ruler(),
             ),
             Positioned(
               top: 4,
@@ -69,33 +63,36 @@ class MainMenuScreen extends StatelessWidget {
                       color: Palette.lightMauve,
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  // The two tools fill the remaining space themselves — big,
-                  // centred touch targets rather than an empty gap around
-                  // small ones — with Measure given the larger share.
-                  Expanded(
-                    flex: 3,
-                    child: _ToolCard(
-                      label: 'MEASURE',
-                      description: 'Point the camera, tap two spots, get the distance.',
-                      prominent: true,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(builder: (_) => MeasureScreen(settings: settings)),
+                  // Compact cards, centred in the space left between the
+                  // wordmark and the ruler, rather than stretched to fill it.
+                  const Spacer(),
+                  _ToolCard(
+                    label: 'MEASURE',
+                    description: 'Point the camera, tap two spots, get the distance.',
+                    prominent: true,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => MeasureScreen(settings: settings, store: store),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    flex: 2,
-                    child: _ToolCard(
-                      label: 'LEVELER',
-                      description: 'Hold flat against a wall to check plumb.',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(builder: (_) => const LevelScreen()),
+                  _HistoryLink(
+                    store: store,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => HistoryScreen(store: store, units: settings.units),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
+                  _ToolCard(
+                    label: 'LEVELER',
+                    description: 'Hold flat against a wall to check plumb.',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const LevelScreen()),
+                    ),
+                  ),
+                  const Spacer(),
                 ],
               ),
             ),
@@ -106,16 +103,127 @@ class MainMenuScreen extends StatelessWidget {
   }
 }
 
-/// Static ruler ticks along the bottom edge, pointing upward — a baseline
-/// hugging the very bottom, with alternating minor/major ticks rising from
-/// it, like a tape measure's edge. Fixed, no animation.
+/// Measure's sub-menu: saved measurements, with a live count. Indented and
+/// hung off a peachRed rule so it reads as part of Measure, not a third tool.
+/// History itself is where rows are picked and bulk-shared or copied.
+class _HistoryLink extends StatelessWidget {
+  const _HistoryLink({required this.store, required this.onTap});
+
+  final RecordingStore store;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 20),
+      child: Row(
+        children: [
+          Container(width: 1.5, height: 44, color: Palette.peachRed.withValues(alpha: 0.6)),
+          Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
+                  child: ListenableBuilder(
+                    listenable: store,
+                    builder: (context, _) {
+                      final n = store.items.length;
+                      return Row(
+                        children: [
+                          const Icon(Icons.history_rounded, color: Palette.warmGray, size: 18),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'HISTORY',
+                            style: TextStyle(
+                              fontFamily: showdistFontFamily,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.5,
+                              fontSize: 13,
+                              color: Palette.white,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              n == 1 ? '1 saved' : '$n saved',
+                              style: const TextStyle(color: Palette.warmGray, fontSize: 12),
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right_rounded, color: Palette.warmGray, size: 20),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The ruler along the bottom edge, drifting slowly to the right forever.
+/// Held still when the system asks for reduced motion.
+class _Ruler extends StatefulWidget {
+  const _Ruler();
+
+  @override
+  State<_Ruler> createState() => _RulerState();
+}
+
+class _RulerState extends State<_Ruler> with SingleTickerProviderStateMixin {
+  /// One full cycle moves the ticks exactly one major interval, so the loop
+  /// is seamless — about 10 px/s.
+  late final AnimationController _drift = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 12),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _drift.stop();
+    } else if (!_drift.isAnimating) {
+      _drift.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _drift.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Its own layer: the ticks repaint every frame, the rest of the menu doesn't.
+    return RepaintBoundary(
+      child: CustomPaint(painter: _RulerPainter(_drift)),
+    );
+  }
+}
+
+/// Ruler ticks pointing upward — a baseline lifted a little off the very
+/// bottom, with alternating minor/major ticks rising from it, like a tape
+/// measure's edge — shifted right by [drift] (0..1 of one major interval).
 class _RulerPainter extends CustomPainter {
-  const _RulerPainter();
+  _RulerPainter(this.drift) : super(repaint: drift);
+
+  final Animation<double> drift;
 
   static const _minorSpacing = 24.0;
   static const _majorEvery = 5;
-  static const _minorHeight = 14.0;
-  static const _majorHeight = 30.0;
+  static const _minorHeight = 28.0;
+  static const _majorHeight = 60.0;
+
+  /// Gap between the baseline and the bottom of the band.
+  static const _lift = 16.0;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -124,19 +232,23 @@ class _RulerPainter extends CustomPainter {
     // hierarchy.
     final minor = Paint()
       ..color = Palette.darkCitrine
-      ..strokeWidth = 1.6;
+      ..strokeWidth = 2.6;
     final major = Paint()
       ..color = Palette.darkCitrine
-      ..strokeWidth = 2.4;
+      ..strokeWidth = 4.0;
     final baseline = Paint()
       ..color = Palette.darkCitrine
-      ..strokeWidth = 1.6;
+      ..strokeWidth = 2.6;
 
-    final y = size.height - 1;
+    final y = size.height - _lift;
     canvas.drawLine(Offset(0, y), Offset(size.width, y), baseline);
 
+    // Start one major interval off the left edge, so ticks slide in from
+    // there as the pattern shifts right.
+    const period = _minorSpacing * _majorEvery;
+    final shift = drift.value * period;
     var i = 0;
-    for (var x = 0.0; x < size.width + _minorSpacing; x += _minorSpacing, i++) {
+    for (var x = shift - period; x < size.width + _minorSpacing; x += _minorSpacing, i++) {
       final isMajor = i % _majorEvery == 0;
       final h = isMajor ? _majorHeight : _minorHeight;
       canvas.drawLine(Offset(x, y), Offset(x, y - h), isMajor ? major : minor);
@@ -144,7 +256,7 @@ class _RulerPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RulerPainter old) => false;
+  bool shouldRepaint(_RulerPainter old) => old.drift != drift;
 }
 
 /// A tool's entry on the main menu: a bordered, tappable block with a label
@@ -174,7 +286,7 @@ class _ToolCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         child: Container(
           width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 24, vertical: prominent ? 32 : 22),
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: prominent ? 18 : 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: accent.withValues(alpha: prominent ? 0.9 : 0.45)),
@@ -193,20 +305,20 @@ class _ToolCard extends StatelessWidget {
                         fontFamily: showdistFontFamily,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 2,
-                        fontSize: prominent ? 24 : 17,
+                        fontSize: prominent ? 20 : 16,
                         color: Palette.white,
                       ),
                     ),
-                    SizedBox(height: prominent ? 10 : 5),
+                    SizedBox(height: prominent ? 6 : 4),
                     Text(
                       description,
-                      style: TextStyle(color: Palette.warmGray, fontSize: prominent ? 14 : 12.5, height: 1.35),
+                      style: TextStyle(color: Palette.warmGray, fontSize: prominent ? 13 : 12, height: 1.35),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
-              Icon(Icons.arrow_forward_rounded, color: accent, size: prominent ? 26 : 20),
+              Icon(Icons.arrow_forward_rounded, color: accent, size: prominent ? 22 : 18),
             ],
           ),
         ),

@@ -136,6 +136,26 @@ void main() {
       expect(text, endsWith('+ 24 more in the attached file'));
     });
 
+    test('bulk summary counts, dates, and lists every segment of each', () {
+      final long = Recording(
+        id: 'l',
+        createdAt: DateTime(2026, 9, 22, 9, 5),
+        points: [for (var i = 0; i < 30; i++) Vec3(i.toDouble(), 0, 0)],
+      );
+      final short = Recording(
+        id: 's',
+        createdAt: DateTime(2026, 9, 21, 17, 40),
+        points: const [Vec3(0, 0, 0), Vec3(2, 0, 0)],
+      );
+      final text = recordingsSummary([long, short], UnitSystem.metric);
+      expect(text, startsWith('Showdist: 2 measurements'));
+      expect(text, contains('2026-09-22 09:05'));
+      expect(text, contains('2026-09-21 17:40'));
+      expect(text, contains('29. 1.00 m'), reason: 'no truncation in the bulk export');
+      expect(text, isNot(contains('more in the attached file')));
+      expect(text.indexOf('29.00 m'), lessThan(text.indexOf('2.00 m')));
+    });
+
     test('error messages are one short line', () {
       final long = 'Share failed\n at dev.example.Foo.bar(Foo.kt:1)';
       expect(shareErrorMessage(Exception(long)), isNot(contains('\n')));

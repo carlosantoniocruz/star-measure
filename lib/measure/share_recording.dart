@@ -48,22 +48,65 @@ String recordingSummary(Recording r, UnitSystem units, {int maxSegments = 20}) {
 /// Opens the Android share sheet — the standard system picker of installed
 /// apps — with the recording as a .txt file attachment.
 Future<void> shareRecording(Recording r, UnitSystem units) async {
+  final file = await _writeExport('showdist-${_stamp(r.createdAt)}.txt', recordingSummary(r, units));
+  await _shareFile(
+    file,
+    subject: 'Showdist: ${formatLength(r.total, units)}',
+    text: recordingSummary(r, units),
+  );
+}
+
+/// Several recordings as one plain-text document, in the order given: a
+/// count, then each recording's date and full summary, every segment listed.
+/// Used both as the bulk .txt file's contents and as the bulk copy text.
+String recordingsSummary(List<Recording> rs, UnitSystem units) {
+  if (rs.length == 1) return recordingSummary(rs.single, units, maxSegments: 1 << 30);
+  final buf = StringBuffer()..writeln('Showdist: ${rs.length} measurements');
+  for (final r in rs) {
+    buf
+      ..writeln()
+      ..writeln(_dateLine(r.createdAt))
+      ..writeln(recordingSummary(r, units, maxSegments: 1 << 30));
+  }
+  return buf.toString().trimRight();
+}
+
+/// Puts [recordingsSummary] on the clipboard.
+Future<void> copyRecordingsText(List<Recording> rs, UnitSystem units) =>
+    Clipboard.setData(ClipboardData(text: recordingsSummary(rs, units)));
+
+/// Opens the Android share sheet with every recording in [rs] in one .txt file.
+Future<void> shareRecordings(List<Recording> rs, UnitSystem units) async {
+  if (rs.length == 1) return shareRecording(rs.single, units);
+  final name = 'showdist-${_stamp(DateTime.now())}-${rs.length}.txt';
+  final file = await _writeExport(name, recordingsSummary(rs, units));
+  await _shareFile(file, subject: 'Showdist: ${rs.length} measurements');
+}
+
+String _two(int n) => n.toString().padLeft(2, '0');
+
+String _stamp(DateTime t) =>
+    '${t.year}${_two(t.month)}${_two(t.day)}-${_two(t.hour)}${_two(t.minute)}${_two(t.second)}';
+
+String _dateLine(DateTime t) => '${t.year}-${_two(t.month)}-${_two(t.day)} ${_two(t.hour)}:${_two(t.minute)}';
+
+/// Writes [contents] to a fresh export file named [name].
+Future<File> _writeExport(String name, String contents) async {
   final dir = Directory(exportDirPath((await ArChannel.dirs()).cache));
   // Drop earlier exports; share_plus has already copied whatever it needed.
   if (await dir.exists()) await dir.delete(recursive: true);
   await dir.create(recursive: true);
-
-  final t = r.createdAt;
-  String two(int n) => n.toString().padLeft(2, '0');
-  final name = 'showdist-${t.year}${two(t.month)}${two(t.day)}-${two(t.hour)}${two(t.minute)}${two(t.second)}.txt';
   final file = File('${dir.path}/$name');
-  await file.writeAsString(recordingSummary(r, units), flush: true);
+  await file.writeAsString(contents, flush: true);
+  return file;
+}
 
+Future<void> _shareFile(File file, {required String subject, String? text}) async {
   await SharePlus.instance.share(
     ShareParams(
-      files: [XFile(file.path, mimeType: 'text/plain', name: name)],
-      subject: 'Showdist: ${formatLength(r.total, units)}',
-      text: recordingSummary(r, units),
+      files: [XFile(file.path, mimeType: 'text/plain', name: file.uri.pathSegments.last)],
+      subject: subject,
+      text: text,
     ),
   );
 }
