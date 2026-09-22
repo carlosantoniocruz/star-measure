@@ -258,16 +258,21 @@ Colours live in `lib/theme.dart` as `Palette`, a `ThemeExtension` reached with
 
 - **Dark** (default under System, on an OLED-friendly black): background and
   bars are Black, text is white, the active/accent colour is Neon.
-- **Light**: the base is Bright instead of white; bars, cards, and headers are
-  Deep/Burnt; text is Ink on the orange surfaces, white on the dark ones (the
-  active/accent colour is Ink too — Neon on Bright has almost no contrast).
-- **Camera overlay** (`ConstellationPainter`): lines, the reticle, and
-  distance labels are always Neon, with a small dark drop shadow, regardless
-  of theme — it sits on the live camera feed, not the app's own chrome.
+- **Light**: a light grey base (`#EDEDED`), not orange — a full orange field
+  read as too loud. Bars are a slightly darker grey, cards are white, text is
+  a soft dark grey (`#262626`, not harsh pure black), and the accent is
+  Burnt — a deeper, muted orange — since Neon has too little contrast against
+  any light background to use as text or an icon colour.
+- **Camera overlay** (`ConstellationPainter`): lines, the four reticle
+  diamonds, and distance labels are always Neon with a small dark drop
+  shadow, regardless of theme — it sits on the live camera feed, not the
+  app's own chrome. The reticle's centre dot is white, so it stays visible
+  against the diamonds around it.
 
 Every text/background combination the app actually uses was checked against
-WCAG's 4.5:1: Ink on Neon (6.2:1) and Bright (7.3:1); white on Burnt (5.5:1)
-and Deep (9.7:1). Secondary/"muted" text is a second solid colour, not the
+WCAG's 4.5:1: in Dark, white and Neon on Black (21:1, 6.9:1); in Light,
+`#262626` on the darkest light-mode surface (11:1) and Burnt on the
+background (4.7:1). Secondary/"muted" text is a second solid colour, not the
 primary colour at reduced opacity, so dimming it can't quietly drop it below
 the ratio a screen was checked at.
 
@@ -282,7 +287,10 @@ reticle, the main button, and the level's bubble. The app icon and the About
 screen's badge (`lib/common/wordmark_painter.dart`) are a flat wordmark —
 "SHOW" in white over "DIST" in black, on Neon — sized to fit whichever icon
 layer it's rendered into (adaptive foreground, legacy, monochrome, or the
-full-bleed `docs/logo.png`).
+full-bleed `docs/logo.png`). The main menu draws the same two words without
+the orange backdrop, coloured from the theme instead (`onBase` / `emphasis`)
+so it reads directly against the page, over a slow drift of ruler tick marks
+along the top and bottom edges.
 
 ## License
 

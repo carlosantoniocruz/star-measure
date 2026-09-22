@@ -100,7 +100,7 @@ class ConstellationPainter extends CustomPainter {
       final p = c + Offset.fromDirection(t * 0.4 + k * math.pi / 2, ringRadius);
       _drawShadowedPath(canvas, diamondPath(p, 4.5), paint);
     }
-    _drawShadowedCircle(canvas, c, 1.8, Paint()..color = _overlay.withValues(alpha: hit ? 0.95 : 0.5));
+    _drawShadowedCircle(canvas, c, 1.8, Paint()..color = Colors.white.withValues(alpha: hit ? 0.95 : 0.5));
   }
 
   void _dashed(Canvas canvas, Offset a, Offset b, Paint paint) {

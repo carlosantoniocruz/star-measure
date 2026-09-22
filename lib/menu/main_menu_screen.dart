@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../common/caption.dart';
 import '../common/wordmark_painter.dart';
@@ -10,10 +11,34 @@ import '../theme.dart';
 
 /// The app's home screen: choose Measurement or Level. Settings is one tap
 /// away, top-right.
-class MainMenuScreen extends StatelessWidget {
+class MainMenuScreen extends StatefulWidget {
   const MainMenuScreen({super.key, required this.settings});
 
   final AppSettings settings;
+
+  @override
+  State<MainMenuScreen> createState() => _MainMenuScreenState();
+}
+
+class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProviderStateMixin {
+  /// Drift of the ruler ticks, in pixels.
+  final _offset = ValueNotifier<double>(0);
+  late final Ticker _ticker = createTicker((d) => _offset.value = d.inMicroseconds / 1e6 * _speed);
+
+  static const _speed = 16.0; // px/s
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker.start();
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+    _offset.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +48,12 @@ class MainMenuScreen extends StatelessWidget {
       body: SafeArea(
         child: Stack(
           children: [
+            Positioned.fill(
+              child: ValueListenableBuilder<double>(
+                valueListenable: _offset,
+                builder: (context, offset, _) => CustomPaint(painter: _RulerPainter(offset: offset, palette: palette)),
+              ),
+            ),
             Positioned(
               top: 4,
               right: 4,
@@ -30,7 +61,7 @@ class MainMenuScreen extends StatelessWidget {
                 tooltip: 'Settings',
                 icon: Icon(Icons.settings_outlined, color: palette.onBaseMuted),
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => SettingsScreen(settings: settings)),
+                  MaterialPageRoute<void>(builder: (_) => SettingsScreen(settings: widget.settings)),
                 ),
               ),
             ),
@@ -38,11 +69,16 @@ class MainMenuScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 SizedBox(
-                  width: 96,
-                  height: 96,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: const CustomPaint(painter: WordmarkPainter()),
+                  width: 220,
+                  height: 100,
+                  child: CustomPaint(
+                    painter: WordmarkPainter(
+                      paintBackground: false,
+                      topColor: palette.onBase,
+                      bottomColor: palette.emphasis,
+                      maxWidthFraction: 0.95,
+                      maxHeightFraction: 0.85,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -55,7 +91,7 @@ class MainMenuScreen extends StatelessWidget {
                         label: 'MEASUREMENT',
                         palette: palette,
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(builder: (_) => MeasureScreen(settings: settings)),
+                          MaterialPageRoute<void>(builder: (_) => MeasureScreen(settings: widget.settings)),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -77,6 +113,44 @@ class MainMenuScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A row of ruler tick marks along the top and bottom edges, drifting
+/// sideways — a quiet nod to measuring, kept well behind the menu's content.
+class _RulerPainter extends CustomPainter {
+  const _RulerPainter({required this.offset, required this.palette});
+
+  final double offset;
+  final Palette palette;
+
+  static const _minorSpacing = 16.0;
+  static const _majorEvery = 5;
+  static const _minorHeight = 7.0;
+  static const _majorHeight = 15.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final minor = Paint()
+      ..color = palette.emphasis.withValues(alpha: 0.10)
+      ..strokeWidth = 1;
+    final major = Paint()
+      ..color = palette.emphasis.withValues(alpha: 0.22)
+      ..strokeWidth = 1.4;
+
+    final period = _minorSpacing * _majorEvery;
+    final shift = offset % period;
+    var i = 0;
+    for (var x = -shift; x < size.width + _minorSpacing; x += _minorSpacing, i++) {
+      final isMajor = i % _majorEvery == 0;
+      final paint = isMajor ? major : minor;
+      final h = isMajor ? _majorHeight : _minorHeight;
+      canvas.drawLine(Offset(x, 0), Offset(x, h), paint);
+      canvas.drawLine(Offset(x, size.height - h), Offset(x, size.height), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RulerPainter old) => old.offset != offset || old.palette != palette;
 }
 
 class _MenuTile extends StatelessWidget {

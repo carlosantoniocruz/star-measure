@@ -23,9 +23,10 @@ const showdistFontFeatures = [FontFeature.slashedZero()];
 
 /// Theme-aware colors, reached via `Palette.of(context)`. Every text/background
 /// combination used here is checked against WCAG 4.5:1:
-///   Ink on Neon    6.2:1   Ink on Bright   7.3:1
-///   White on Burnt 5.5:1   White on Deep   9.7:1
-/// so Ink only ever sits on Neon/Bright, and White only on Burnt/Deep/Black.
+///   Dark:  white on Black          21:1     Neon on Black        6.9:1
+///   Light: #262626 on #DCDCDC (bar, the darkest light-mode surface)  11:1
+///          Burnt (the accent) on #EDEDED (background)                4.7:1
+///          #B3261E (alert) on white (card)                           6.5:1
 /// (Secondary/"muted" tones are solid colors, not opacity, so they can't drift
 /// below the ratio a themed screen was checked at.)
 @immutable
@@ -65,8 +66,9 @@ class Palette extends ThemeExtension<Palette> {
   final Color onSurfaceMuted;
 
   /// Accent for active/selected/lit state, drawn on [background]. Neon on the
-  /// dark theme's black; Ink on the light theme's orange base, since neon on
-  /// neon has almost no contrast.
+  /// dark theme's black; Burnt (a deeper, muted orange) on the light theme's
+  /// grey, since Neon itself has too little contrast against any light
+  /// background to use as text/icon color.
   final Color emphasis;
 
   /// Destructive-action icon tint on [background] (decorative; text stays
@@ -89,17 +91,21 @@ class Palette extends ThemeExtension<Palette> {
     alertOnCard: Color(0xFFFF6B57),
   );
 
+  // A calmer light theme: light grey rather than a full orange field, dark
+  // grey text (not harsh pure black), and Burnt — a deeper, muted orange —
+  // standing in for the accent, since Neon has almost no contrast against a
+  // light background of any kind.
   static const light = Palette(
-    background: Hue.bright,
-    bar: Hue.deep,
-    card: Hue.burnt,
-    onBase: Hue.ink,
-    onBaseMuted: Color(0xFF2B1D14),
-    onSurface: Colors.white,
-    onSurfaceMuted: Color(0xFFE8E8E8),
-    emphasis: Hue.ink,
-    alertIcon: Color(0xFF6B1206),
-    alertOnCard: Color(0xFFFFDCD3),
+    background: Color(0xFFEDEDED),
+    bar: Color(0xFFDCDCDC),
+    card: Colors.white,
+    onBase: Color(0xFF262626),
+    onBaseMuted: Color(0xFF595959),
+    onSurface: Color(0xFF262626),
+    onSurfaceMuted: Color(0xFF595959),
+    emphasis: Hue.burnt,
+    alertIcon: Color(0xFFB3261E),
+    alertOnCard: Color(0xFFB3261E),
   );
 
   static Palette of(BuildContext context) => Theme.of(context).extension<Palette>()!;
