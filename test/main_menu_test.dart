@@ -21,7 +21,7 @@ void main() {
     expect(find.text('LEVEL'), findsOneWidget);
   });
 
-  testWidgets('Level opens the bubble level, reading level while flat', (tester) async {
+  testWidgets('Level opens the bubble level, reading level before any tilt', (tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: buildTheme(Brightness.dark),
       home: MainMenuScreen(settings: await settings()),

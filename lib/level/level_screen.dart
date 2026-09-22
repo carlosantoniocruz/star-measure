@@ -8,11 +8,13 @@ import '../common/caption.dart';
 import '../common/diamond.dart';
 import '../theme.dart';
 
-/// Within this many degrees of flat, the bubble reads as level.
+/// Within this many degrees of plumb, the bubble reads as level.
 const _levelThresholdDeg = 0.3;
 
-/// A bubble level using the accelerometer. Lay the phone flat (screen up) on
-/// a surface; the diamond centres and lights up when the surface is level.
+/// A bubble level for things mounted on a wall — a shelf, a picture frame, a
+/// TV bracket. Hold the phone upright and flat against the wall (or against
+/// whatever you're checking); the diamond centres and the ring lights up
+/// when it's plumb.
 class LevelScreen extends StatefulWidget {
   const LevelScreen({super.key});
 
@@ -21,7 +23,7 @@ class LevelScreen extends StatefulWidget {
 }
 
 class _LevelScreenState extends State<LevelScreen> {
-  // Smoothed tilt, in units of g (roughly -1..1 near level). Raw readings are
+  // Smoothed tilt, in units of g (roughly -1..1 near plumb). Raw readings are
   // noisy, so each sample nudges this rather than replacing it outright.
   final _tilt = ValueNotifier<Offset>(Offset.zero);
   StreamSubscription<AccelerometerEvent>? _sub;
@@ -38,12 +40,14 @@ class _LevelScreenState extends State<LevelScreen> {
   }
 
   void _onEvent(AccelerometerEvent e) {
-    // Flat and face-up reads x≈0, y≈0, z≈+9.8 (gravity's reaction force).
-    // x/y relative to that gives left-right / forward-back tilt as a
-    // fraction of g — near enough to the tilt angle for small angles, and
-    // exact enough for a bubble level.
+    // Held upright and flat against a wall, plumb reads x≈0, z≈0, y≈±9.8
+    // (gravity's reaction force runs down the phone's long axis, not out of
+    // the screen). x is roll — tilting left/right while flush against the
+    // wall, which is what "is this shelf level" actually measures. z is
+    // whether the phone itself is held flush against the wall rather than
+    // tipped forward or back off it.
     const g = 9.80665;
-    final sample = Offset(e.x / g, e.y / g);
+    final sample = Offset(e.x / g, e.z / g);
     final prev = _tilt.value;
     _tilt.value = Offset(
       prev.dx + (sample.dx - prev.dx) * _smoothing,
@@ -83,8 +87,16 @@ class _LevelScreenState extends State<LevelScreen> {
             final degrees = math.atan(tilt.distance) * 180 / math.pi;
             final level = degrees <= _levelThresholdDeg;
             return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(32, 20, 32, 0),
+                  child: Caption(
+                    'HOLD FLAT AGAINST THE WALL',
+                    size: 11,
+                    spacing: 2,
+                    color: palette.onBaseMuted,
+                  ),
+                ),
                 Expanded(
                   child: Center(
                     child: CustomPaint(

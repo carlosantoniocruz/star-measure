@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../common/caption.dart';
-import '../common/wordmark_painter.dart';
 import '../level/level_screen.dart';
 import '../measure/measure_screen.dart';
 import '../measure/settings_screen.dart';
@@ -25,7 +24,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
   final _offset = ValueNotifier<double>(0);
   late final Ticker _ticker = createTicker((d) => _offset.value = d.inMicroseconds / 1e6 * _speed);
 
-  static const _speed = 16.0; // px/s
+  static const _speed = 26.0; // px/s
 
   @override
   void initState() {
@@ -68,20 +67,6 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: 220,
-                  height: 100,
-                  child: CustomPaint(
-                    painter: WordmarkPainter(
-                      paintBackground: false,
-                      topColor: palette.onBase,
-                      bottomColor: palette.emphasis,
-                      maxWidthFraction: 0.95,
-                      maxHeightFraction: 0.85,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 40),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Column(
@@ -115,37 +100,44 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
   }
 }
 
-/// A row of ruler tick marks along the top and bottom edges, drifting
-/// sideways — a quiet nod to measuring, kept well behind the menu's content.
+/// A drifting ruler edge — a baseline with alternating minor/major tick
+/// marks hanging from it, like a tape measure — behind the menu's tiles.
+/// Replaces the wordmark as the screen's main visual: bigger, and always
+/// moving sideways.
 class _RulerPainter extends CustomPainter {
   const _RulerPainter({required this.offset, required this.palette});
 
   final double offset;
   final Palette palette;
 
-  static const _minorSpacing = 16.0;
+  static const _minorSpacing = 24.0;
   static const _majorEvery = 5;
-  static const _minorHeight = 7.0;
-  static const _majorHeight = 15.0;
+  static const _minorHeight = 16.0;
+  static const _majorHeight = 34.0;
+  static const _bandY = 0.30; // fraction of the screen height
 
   @override
   void paint(Canvas canvas, Size size) {
     final minor = Paint()
-      ..color = palette.emphasis.withValues(alpha: 0.10)
-      ..strokeWidth = 1;
+      ..color = palette.emphasis.withValues(alpha: 0.16)
+      ..strokeWidth = 1.6;
     final major = Paint()
+      ..color = palette.emphasis.withValues(alpha: 0.32)
+      ..strokeWidth = 2.4;
+    final baseline = Paint()
       ..color = palette.emphasis.withValues(alpha: 0.22)
-      ..strokeWidth = 1.4;
+      ..strokeWidth = 1.6;
+
+    final y = size.height * _bandY;
+    canvas.drawLine(Offset(0, y), Offset(size.width, y), baseline);
 
     final period = _minorSpacing * _majorEvery;
     final shift = offset % period;
     var i = 0;
     for (var x = -shift; x < size.width + _minorSpacing; x += _minorSpacing, i++) {
       final isMajor = i % _majorEvery == 0;
-      final paint = isMajor ? major : minor;
       final h = isMajor ? _majorHeight : _minorHeight;
-      canvas.drawLine(Offset(x, 0), Offset(x, h), paint);
-      canvas.drawLine(Offset(x, size.height - h), Offset(x, size.height), paint);
+      canvas.drawLine(Offset(x, y), Offset(x, y + h), isMajor ? major : minor);
     }
   }
 

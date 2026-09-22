@@ -18,17 +18,21 @@ The app opens straight to a **main menu**: **Measurement** (the AR tape
 measure) and **Level** (a bubble level), with Settings one tap away, top
 right.
 
-**Measuring.**
+**Measuring.** This screen's colors are fixed (the same in Light and Dark) —
+it's the live camera feed, not the app's own chrome, so it has no reason to
+follow the system theme.
 
 1. Allow camera access. If the phone lacks Google Play Services for AR, the app
    offers to install it.
 2. Move the phone slowly so ARCore can find surfaces. The four diamonds around
-   the screen centre turn green when they are on a surface.
+   the screen centre light up when they are on a surface.
 3. **Tap** the large diamond button to place a point. Each new point adds a
    segment with its length, and a dashed line shows the live distance from the
    last point to the reticle.
-4. **Hold** the button once you have two or more points to stop and save the
-   measurement. The screen clears, ready for the next one.
+4. **Hold anywhere on screen** once you have two or more points to stop and
+   save the measurement — not just the button, so you don't have to aim for
+   it. The button's ring fills as you hold, wherever your thumb actually is.
+   The screen clears, ready for the next one.
 
 The bottom row, left to right:
 
@@ -37,16 +41,18 @@ The bottom row, left to right:
 | History | Open the history of saved measurements (count badge) |
 | Undo | Remove the last point |
 | Diamond button, tap | Place a point at the reticle |
-| Diamond button, hold (0.8 s) | Save the measurement and start fresh |
+| Hold anywhere on screen (0.8 s) | Save the measurement and start fresh |
 | Close | Clear all points without saving |
 | M / FT | Metric or imperial display |
 
 Up to 24 points per measurement. Portrait only. The system back gesture/button
 returns to the main menu.
 
-**Level.** A bubble level using the accelerometer: lay the phone flat (screen
-up) on a surface. The diamond centres in the ring and the ring lights up when
-you're within 0.3° of flat; the readout below is the tilt in degrees.
+**Level.** A bubble level for things mounted on a wall — a shelf, a picture
+frame, a TV bracket — using the accelerometer. Hold the phone upright and flat
+against the wall (or against whatever you're checking). The diamond centres
+in the ring and the ring lights up when you're within 0.3° of plumb; the
+readout below is the tilt in degrees.
 
 ## Settings
 
@@ -287,10 +293,9 @@ reticle, the main button, and the level's bubble. The app icon and the About
 screen's badge (`lib/common/wordmark_painter.dart`) are a flat wordmark —
 "SHOW" in white over "DIST" in black, on Neon — sized to fit whichever icon
 layer it's rendered into (adaptive foreground, legacy, monochrome, or the
-full-bleed `docs/logo.png`). The main menu draws the same two words without
-the orange backdrop, coloured from the theme instead (`onBase` / `emphasis`)
-so it reads directly against the page, over a slow drift of ruler tick marks
-along the top and bottom edges.
+full-bleed `docs/logo.png`). The main menu doesn't repeat it; instead its
+background is a large, continuously drifting ruler edge — a baseline with
+tick marks hanging from it, like a tape measure — in the accent color.
 
 ## License
 

@@ -21,6 +21,12 @@ import 'recording_sheet.dart';
 import 'recording_store.dart';
 import 'units.dart';
 
+/// The measuring screen is camera-dominated real-world imagery, not the
+/// app's own chrome, so its colors stay fixed regardless of the Light/Dark
+/// setting — an icon that's white on black shouldn't flip to dark-on-light
+/// over a scene that hasn't changed at all.
+const _palette = Palette.dark;
+
 class MeasureScreen extends StatefulWidget {
   const MeasureScreen({super.key, required this.settings});
 
@@ -44,10 +50,22 @@ class _Problem {
 }
 
 class _MeasureScreenState extends State<MeasureScreen>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   final _frame = ValueNotifier<ArFrame>(ArFrame.empty);
   final _time = ValueNotifier<double>(0);
   late final Ticker _ticker = createTicker((d) => _time.value = d.inMicroseconds / 1e6);
+
+  /// Hold anywhere on screen to save: shared by the full-screen gesture
+  /// detector and the button's own charge-ring display.
+  late final AnimationController _charge = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 800),
+  )..addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _record();
+        _charge.value = 0;
+      }
+    });
 
   StreamSubscription<ArFrame>? _sub;
   RecordingStore? _store;
@@ -71,6 +89,7 @@ class _MeasureScreenState extends State<MeasureScreen>
     _sub?.cancel();
     ArChannel.stop();
     _ticker.dispose();
+    _charge.dispose();
     _frame.dispose();
     _time.dispose();
     _store?.dispose();
@@ -152,7 +171,22 @@ class _MeasureScreenState extends State<MeasureScreen>
     ArChannel.addPoint();
   }
 
-  /// Long-press: stop measuring, save what's on screen, and start fresh.
+  /// Start the save charge — from the button, or from anywhere else on
+  /// screen. Ignored with fewer than two points, same as before.
+  void _chargeStart() {
+    if (_frame.value.points.length < 2) return;
+    if (_charge.status == AnimationStatus.forward) return;
+    HapticFeedback.selectionClick();
+    _charge.forward(from: 0);
+  }
+
+  void _chargeCancel() {
+    if (_charge.status != AnimationStatus.completed) {
+      _charge.animateBack(0, duration: const Duration(milliseconds: 200));
+    }
+  }
+
+  /// Charge completed: stop measuring, save what's on screen, and start fresh.
   Future<void> _record() async {
     final points = _frame.value.points;
     if (points.length < 2) return;
@@ -168,10 +202,9 @@ class _MeasureScreenState extends State<MeasureScreen>
   }
 
   Future<void> _showSaved(Recording r) {
-    final palette = Palette.of(context);
     return showModalBottomSheet<void>(
       context: context,
-      backgroundColor: palette.card,
+      backgroundColor: _palette.card,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (sheetContext) => RecordingSheet(
@@ -196,137 +229,143 @@ class _MeasureScreenState extends State<MeasureScreen>
 
   @override
   Widget build(BuildContext context) {
-    final palette = Palette.of(context);
     final problem = _problem;
     return Scaffold(
-      backgroundColor: palette.background,
+      backgroundColor: _palette.background,
       body: problem != null
           ? _ProblemView(problem: problem)
           : _running
               ? _buildAr()
-              : Center(child: Caption('WAKING THE CAMERA', color: palette.onBaseMuted)),
+              : Center(child: Caption('WAKING THE CAMERA', color: _palette.onBaseMuted)),
     );
   }
 
   Widget _buildAr() {
-    return ListenableBuilder(
-      listenable: widget.settings,
-      builder: (context, _) {
-        final palette = Palette.of(context);
-        final units = widget.settings.units;
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            const _ArView(),
-            const IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0x99000000), Color(0x00000000), Color(0x00000000), Color(0xAA000000)],
-                    stops: [0, 0.18, 0.72, 1],
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onLongPressStart: (_) => _chargeStart(),
+      onLongPressEnd: (_) => _chargeCancel(),
+      onLongPressCancel: _chargeCancel,
+      child: ListenableBuilder(
+        listenable: widget.settings,
+        builder: (context, _) {
+          final units = widget.settings.units;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              const _ArView(),
+              const IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0x99000000), Color(0x00000000), Color(0x00000000), Color(0xAA000000)],
+                      stops: [0, 0.18, 0.72, 1],
+                    ),
                   ),
                 ),
               ),
-            ),
-            IgnorePointer(
-              child: CustomPaint(
-                painter: ConstellationPainter(frame: _frame, time: _time, units: units),
-              ),
-            ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
-                child: Column(
-                  children: [
-                    ValueListenableBuilder<ArFrame>(
-                      valueListenable: _frame,
-                      builder: (context, f, _) => Column(
-                        children: [
-                          _Hint(text: _hint(f), color: palette.onBase),
-                          if (f.points.length >= 2) ...[
-                            const SizedBox(height: 6),
-                            Text(
-                              formatLength(f.totalLength, units),
-                              style: TextStyle(
-                                color: palette.onBase,
-                                fontSize: 34,
-                                fontWeight: FontWeight.w200,
-                                fontFeatures: [...showdistFontFeatures, const FontFeature.tabularFigures()],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
-                    ValueListenableBuilder<ArFrame>(
-                      valueListenable: _frame,
-                      builder: (context, f, _) {
-                        final hasPoints = f.points.isNotEmpty;
-                        // Two items each side of the main button keeps it centred.
-                        return Row(
-                          children: [
-                            Expanded(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  ListenableBuilder(
-                                    listenable: _store ?? _time,
-                                    builder: (context, _) => _IconAction(
-                                      icon: Icons.history_rounded,
-                                      tooltip: 'History',
-                                      badge: _store?.items.length ?? 0,
-                                      onTap: _store == null ? null : _showHistory,
-                                      palette: palette,
-                                    ),
-                                  ),
-                                  _IconAction(
-                                    icon: Icons.undo_rounded,
-                                    tooltip: 'Undo last point',
-                                    onTap: hasPoints ? ArChannel.undo : null,
-                                    palette: palette,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            _AddButton(
-                              enabled: f.reticle != null,
-                              canRecord: f.points.length >= 2,
-                              onAdd: _addPoint,
-                              onRecord: _record,
-                              palette: palette,
-                            ),
-                            Expanded(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _IconAction(
-                                    icon: Icons.close_rounded,
-                                    tooltip: 'Clear all points',
-                                    onTap: hasPoints ? ArChannel.clear : null,
-                                    palette: palette,
-                                  ),
-                                  _UnitToggle(
-                                    value: units,
-                                    onChanged: widget.settings.setUnits,
-                                    palette: palette,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ],
+              IgnorePointer(
+                child: CustomPaint(
+                  painter: ConstellationPainter(frame: _frame, time: _time, units: units),
                 ),
               ),
-            ),
-          ],
-        );
-      },
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
+                  child: Column(
+                    children: [
+                      ValueListenableBuilder<ArFrame>(
+                        valueListenable: _frame,
+                        builder: (context, f, _) => Column(
+                          children: [
+                            _Hint(text: _hint(f), color: _palette.onBase),
+                            if (f.points.length >= 2) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                formatLength(f.totalLength, units),
+                                style: TextStyle(
+                                  color: _palette.onBase,
+                                  fontSize: 34,
+                                  fontWeight: FontWeight.w200,
+                                  fontFeatures: [...showdistFontFeatures, const FontFeature.tabularFigures()],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      ValueListenableBuilder<ArFrame>(
+                        valueListenable: _frame,
+                        builder: (context, f, _) {
+                          final hasPoints = f.points.isNotEmpty;
+                          // Two items each side of the main button keeps it centred.
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    ListenableBuilder(
+                                      listenable: _store ?? _time,
+                                      builder: (context, _) => _IconAction(
+                                        icon: Icons.history_rounded,
+                                        tooltip: 'History',
+                                        badge: _store?.items.length ?? 0,
+                                        onTap: _store == null ? null : _showHistory,
+                                        palette: _palette,
+                                      ),
+                                    ),
+                                    _IconAction(
+                                      icon: Icons.undo_rounded,
+                                      tooltip: 'Undo last point',
+                                      onTap: hasPoints ? ArChannel.undo : null,
+                                      palette: _palette,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              AnimatedBuilder(
+                                animation: _charge,
+                                builder: (context, _) => _AddButton(
+                                  enabled: f.reticle != null,
+                                  charge: _charge.value,
+                                  onAdd: _addPoint,
+                                  palette: _palette,
+                                ),
+                              ),
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    _IconAction(
+                                      icon: Icons.close_rounded,
+                                      tooltip: 'Clear all points',
+                                      onTap: hasPoints ? ArChannel.clear : null,
+                                      palette: _palette,
+                                    ),
+                                    _UnitToggle(
+                                      value: units,
+                                      onChanged: widget.settings.setUnits,
+                                      palette: _palette,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -347,7 +386,7 @@ class _MeasureScreenState extends State<MeasureScreen>
         if (f.reticle == null && f.points.length < 2) return 'Aim at a surface';
         if (f.points.isEmpty) return 'Tap to place a point';
         if (f.points.length == 1) return 'Place the next point';
-        return 'Tap to add · hold to save';
+        return 'Tap to add · hold anywhere to save';
     }
   }
 }
@@ -491,71 +530,28 @@ class _IconAction extends StatelessWidget {
 }
 
 /// A thin ring around a diamond. Tap adds a point (lit when the reticle is on
-/// a surface). Once two points exist, holding fills the ring and saves.
-class _AddButton extends StatefulWidget {
-  const _AddButton({
-    required this.enabled,
-    required this.canRecord,
-    required this.onAdd,
-    required this.onRecord,
-    required this.palette,
-  });
+/// a surface). [charge] (0 to 1, driven by holding anywhere on screen) fills
+/// the ring; reaching 1 saves the measurement.
+class _AddButton extends StatelessWidget {
+  const _AddButton({required this.enabled, required this.charge, required this.onAdd, required this.palette});
 
-  final bool enabled, canRecord;
-  final VoidCallback onAdd, onRecord;
+  final bool enabled;
+  final double charge;
+  final VoidCallback onAdd;
   final Palette palette;
 
   @override
-  State<_AddButton> createState() => _AddButtonState();
-}
-
-class _AddButtonState extends State<_AddButton> with SingleTickerProviderStateMixin {
-  late final AnimationController _charge = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 800),
-  )..addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        widget.onRecord();
-        _charge.value = 0;
-      }
-    });
-
-  @override
-  void dispose() {
-    _charge.dispose();
-    super.dispose();
-  }
-
-  void _cancel() {
-    if (_charge.status != AnimationStatus.completed) {
-      _charge.animateBack(0, duration: const Duration(milliseconds: 200));
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final lit = widget.enabled;
     return Semantics(
       button: true,
-      enabled: lit,
-      label: 'Place point. Hold to save measurement',
+      enabled: enabled,
+      label: 'Place point. Hold anywhere on screen to save measurement',
       child: GestureDetector(
-        onTap: lit ? widget.onAdd : null,
-        onLongPressStart: widget.canRecord
-            ? (_) {
-                HapticFeedback.selectionClick();
-                _charge.forward(from: 0);
-              }
-            : null,
-        onLongPressEnd: (_) => _cancel(),
-        onLongPressCancel: _cancel,
+        onTap: enabled ? onAdd : null,
         behavior: HitTestBehavior.opaque,
-        child: AnimatedBuilder(
-          animation: _charge,
-          builder: (context, _) => CustomPaint(
-            size: const Size(76, 76),
-            painter: _AddButtonPainter(lit: lit, charge: _charge.value, palette: widget.palette),
-          ),
+        child: CustomPaint(
+          size: const Size(96, 96),
+          painter: _AddButtonPainter(lit: enabled, charge: charge, palette: palette),
         ),
       ),
     );
@@ -596,7 +592,7 @@ class _AddButtonPainter extends CustomPainter {
           ..color = palette.onBase,
       );
     }
-    canvas.drawPath(diamondPath(c, 11), Paint()..color = accent);
+    canvas.drawPath(diamondPath(c, 14), Paint()..color = accent);
   }
 
   @override
@@ -611,7 +607,6 @@ class _ProblemView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = Palette.of(context);
     return SafeArea(
       child: Center(
         child: Padding(
@@ -622,27 +617,27 @@ class _ProblemView extends StatelessWidget {
               SizedBox(
                 width: 40,
                 height: 40,
-                child: CustomPaint(painter: _DiamondMark(palette.emphasis.withValues(alpha: 0.85))),
+                child: CustomPaint(painter: _DiamondMark(_palette.emphasis.withValues(alpha: 0.85))),
               ),
               const SizedBox(height: 24),
               Text(
                 problem.title,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: palette.onBase, fontSize: 22, fontWeight: FontWeight.w300),
+                style: TextStyle(color: _palette.onBase, fontSize: 22, fontWeight: FontWeight.w300),
               ),
               const SizedBox(height: 12),
               Text(
                 problem.body,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: palette.onBaseMuted, fontSize: 14, height: 1.4),
+                style: TextStyle(color: _palette.onBaseMuted, fontSize: 14, height: 1.4),
               ),
               if (problem.action != null) ...[
                 const SizedBox(height: 28),
                 OutlinedButton(
                   onPressed: problem.onAction,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: palette.onBase,
-                    side: BorderSide(color: palette.onBase.withValues(alpha: 0.3)),
+                    foregroundColor: _palette.onBase,
+                    side: BorderSide(color: _palette.onBase.withValues(alpha: 0.3)),
                   ),
                   child: Text(problem.action!),
                 ),
