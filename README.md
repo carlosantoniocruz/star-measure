@@ -1,7 +1,5 @@
 # Showdist
 
-<p align="center"><img src="docs/logo.png" width="160" alt="Showdist logo"></p>
-
 An augmented-reality tape measure for Android, built with Flutter and ARCore.
 Point the camera at a surface, tap to drop points, and read off the distances.
 Measurements can be saved on the device, browsed in a history, and shared as
@@ -146,13 +144,11 @@ flutter analyze
 flutter test
 ```
 
-The launcher icon (adaptive, with a themed monochrome layer, plus legacy icons
-and `docs/logo.png`) is rendered from the same painter as the About screen's
-badge. After changing `lib/common/tick_ring_painter.dart`, regenerate it with:
-
-```sh
-flutter test tool/generate_icons.dart
-```
+The launcher icon is a set of Android vector drawables, not a Flutter-rendered
+asset — see `android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
+(adaptive: background/foreground/monochrome) and `mipmap-anydpi-v21/ic_launcher.xml`
+(a flattened fallback for API 24-25, which predate adaptive icons). Edit the
+`drawable/ic_launcher_*.xml` files directly; there's no generation step.
 
 ## How it works
 
@@ -176,7 +172,6 @@ Dart (lib/)
   level/                the accelerometer-driven bubble level
   common/               the tick-ring painter, Caption
   about_screen.dart     app info, per-tool quick start, developer section
-tool/generate_icons.dart  renders the launcher icon from the in-app tick ring
 ```
 
 Each camera frame the native side sends one flat `DoubleArray`. Anchor
@@ -294,10 +289,12 @@ feature (`FontFeature.slashedZero()`) everywhere so 0/O and 1/l/I stay
 unmistakable.
 
 Small filled circles — not diamonds — mark measuring points, the reticle, the
-main button, and the level's bubble. The **app icon** (and the About screen's
-badge, `lib/common/tick_ring_painter.dart`) has no lettering at all:
-a `darkTyrianBlue` field, a `peachRed` ring, and `darkTyrianBlue` tick marks
-notched across it at regular intervals, like a gauge dial.
+main button, and the level's bubble. The **app icon** is an Android adaptive
+icon built from plain vector drawables (`android/app/src/main/res/drawable/
+ic_launcher_*.xml`), no lettering: a `darkTyrianBlue` background, and a
+foreground of three `seaGreen` dots in a triangle around a white centre dot —
+the same reticle motif as the AR overlay. A monochrome layer (the same dots,
+single-coloured) supports Android 13+ themed icons.
 The **SHOWDIST wordmark** — one word, all caps, `lightMauve` — sits at the
 top of the main menu. Below it, **Measure** and **Leveler** are large
 bordered cards (`peachRed` and `olympicBlue` respectively), Measure the
