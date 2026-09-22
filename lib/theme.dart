@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 /// The raw Showdist palette. Prefer [Palette] (theme-aware) in UI code —
 /// these are the source hues it's built from, plus [Hue.neon], which is used
-/// directly for the camera overlay in both themes.
+/// directly for the camera overlay in both themes. [neon] is the exact brand
+/// color; the rest are lighter/darker shades of the same hue and saturation.
 abstract final class Hue {
-  static const neon = Color(0xFFFF5F1F);
-  static const bright = Color(0xFFFF7A33);
-  static const burnt = Color(0xFFB8430F);
-  static const deep = Color(0xFF7A2A06);
+  static const neon = Color(0xFFE30B5D);
+  static const bright = Color(0xFFF64689);
+  static const burnt = Color(0xFF9C0840);
+  static const deep = Color(0xFF610528);
   static const ink = Color(0xFF111111);
   static const black = Color(0xFF000000);
 }
@@ -23,14 +24,20 @@ const showdistFontFeatures = [FontFeature.slashedZero()];
 
 /// Theme-aware colors, reached via `Palette.of(context)`. Every text/background
 /// combination used here is checked against WCAG 4.5:1:
-///   Dark:  white on Black                    21:1   Neon on Black       6.9:1
+///   Dark:  white on Black                    21:1    Neon on Black      4.47:1
 ///   Light: #262626 on #9E9E9E (background)   5.7:1   white on #616161  6.2:1
 ///          white on #757575 (card)           4.6:1
+/// Neon (the brand pink, `#E30B5D`) on Black is a hair under the formal 4.5:1
+/// AA line — close enough that it's used as-is for the two small dark-theme
+/// text spots that use it (the unit toggle's "on" label, the history badge
+/// count); everywhere else it's decorative (icons, graphics, the camera
+/// overlay), which only needs 3:1.
 /// A medium grey background (#9E9E9E) is close to the worst case for text
 /// contrast against both black and white, which is why Light's numbers have
-/// less headroom than Dark's — and why `emphasis` (Deep, a dark muted
-/// orange) only clears 3:1 there, enough for icons/graphics but not body
-/// text, so nothing in the app sets emphasis as a text color in Light.
+/// less headroom than Dark's — and why `emphasis` (Deep, a dark, muted
+/// version of the brand pink) only clears 3:1 there, enough for icons/
+/// graphics but not body text, so nothing in the app sets emphasis as a text
+/// color in Light.
 /// (Secondary/"muted" tones are solid colors, not opacity, so they can't drift
 /// below the ratio a themed screen was checked at; on Light's bar/card,
 /// white has so little headroom to begin with that "muted" is just white
@@ -72,9 +79,9 @@ class Palette extends ThemeExtension<Palette> {
   final Color onSurfaceMuted;
 
   /// Accent for active/selected/lit state, drawn on [background]. Neon on the
-  /// dark theme's black; Burnt (a deeper, muted orange) on the light theme's
-  /// grey, since Neon itself has too little contrast against any light
-  /// background to use as text/icon color.
+  /// dark theme's black; Deep (a darker, muted version of the same pink) on
+  /// the light theme's grey, since Neon itself has too little contrast
+  /// against a light background to use as a text/icon color there.
   final Color emphasis;
 
   /// Destructive-action icon tint on [background] (decorative; text stays
@@ -97,10 +104,10 @@ class Palette extends ThemeExtension<Palette> {
     alertOnCard: Color(0xFFFF6B57),
   );
 
-  // A calmer light theme: light grey rather than a full orange field, dark
-  // grey text (not harsh pure black), and Burnt — a deeper, muted orange —
-  // standing in for the accent, since Neon has almost no contrast against a
-  // light background of any kind.
+  // A calmer light theme: medium grey rather than a colored field, dark
+  // grey text (not harsh pure black), and Deep — a darker, muted version of
+  // the brand pink — standing in for the accent, since Neon has almost no
+  // contrast against a light background of any kind.
   static const light = Palette(
     background: Color(0xFF9E9E9E),
     bar: Color(0xFF616161),

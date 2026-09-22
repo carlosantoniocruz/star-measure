@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// The app icon: a black field, a neon-orange ring, and black tick marks
-/// notched across it at regular intervals — like a gauge dial or a length of
-/// hazard tape bent into a circle. No lettering.
+/// The app icon: a black field, a Neon ring (the brand pink), and black tick
+/// marks notched across it at regular intervals, like a gauge dial. No
+/// lettering.
 ///
 /// Sized so the ring's outer edge sits at [outerFraction] of the canvas's
 /// shorter side, whichever icon layer it's rendered into (adaptive
@@ -50,7 +50,7 @@ class TickRingPainter extends CustomPainter {
     );
 
     // Black ticks notch across the ring, alternating longer (major) and
-    // shorter (minor) — the orange/black alternation the ring reads as.
+    // shorter (minor) — the pink/black alternation the ring reads as.
     final tickPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.butt

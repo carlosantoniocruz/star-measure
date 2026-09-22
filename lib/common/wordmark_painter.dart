@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 
 /// The app mark: "SHOW" over "DIST", by default white-on-black on a flat
-/// orange background. Used for the launcher icon (see
+/// pink background. Used for the launcher icon (see
 /// `tool/generate_icons.dart`), the About screen's badge, and (colors
 /// overridden, no background) the main menu's heading.
 ///
@@ -30,7 +30,7 @@ class WordmarkPainter extends CustomPainter {
   final bool paintBackground;
 
   /// Colors for "SHOW" and "DIST". The white-on-black default only reads
-  /// clearly against the flat orange background this paints by default —
+  /// clearly against the flat pink background this paints by default —
   /// pass theme colors instead when [paintBackground] is false and the mark
   /// sits directly on a screen's own background.
   final Color topColor, bottomColor;

@@ -7,10 +7,11 @@ Point the camera at a surface, tap to drop points, and read off the distances.
 Measurements can be saved on the device, browsed in a history, and shared as
 a plain-text file through the Android share sheet, or copied as text.
 
-The look is neon orange on black in Dark, and a medium grey with dark-orange
-accents in Light: hairline measuring lines, small dots for points and the
-reticle, and a background of drifting tick marks. It is an independent
-project and is not affiliated with Google or Android.
+The look is a vivid pink (`#E30B5D`) on black in Dark, and a medium grey with
+a darker, muted version of the same pink in Light: hairline measuring lines,
+small dots for points and the reticle, and a background of drifting tick
+marks. It is an independent project and is not affiliated with Google or
+Android.
 
 ## Using it
 
@@ -60,10 +61,11 @@ readout below is the tilt in degrees.
 Reached from the gear icon on the main menu. Both choices are saved on device
 and restored on the next launch:
 
-- **Theme** — System (default), Light, or Dark. Dark is black with neon
-  accents; Light is a medium grey (`#9E9E9E`) with a darker-grey bar and
-  card and a deep, muted orange accent — Neon itself doesn't have enough
-  contrast against a mid-grey background to use as text.
+- **Theme** — System (default), Light, or Dark. Dark is black with the brand
+  pink as its accent; Light is a medium grey (`#9E9E9E`) with a darker-grey
+  bar and card and a deep, muted version of the same pink as its accent —
+  Neon itself doesn't have enough contrast against a mid-grey background to
+  use as text.
 - **Units** — Imperial (default: feet and inches, e.g. `4′ 7 1/2″`) or
   Metric. The same setting drives the in-AR M/FT toggle.
 
@@ -245,19 +247,23 @@ both need real hardware. Test them on a device.
 Colours live in `lib/theme.dart` as `Palette`, a `ThemeExtension` reached with
 `Palette.of(context)`, plus the raw hues in `Hue`:
 
-| | Neon `#FF5F1F` | Bright `#FF7A33` | Burnt `#B8430F` | Deep `#7A2A06` | Ink `#111111` | Black `#000000` |
+| | Neon `#E30B5D` | Bright `#F64689` | Burnt `#9C0840` | Deep `#610528` | Ink `#111111` | Black `#000000` |
 | --- | --- | --- | --- | --- | --- | --- |
+
+Neon is the exact brand color; Bright/Burnt/Deep are lighter/darker shades of
+the same hue and saturation.
 
 - **Dark** (default under System, on an OLED-friendly black): background and
   bars are Black, text is white, the active/accent colour is Neon.
 - **Light**: a medium grey base (`#9E9E9E`), with a darker grey bar and card
   (`#616161` / `#757575`, both taking white text) and Deep — a dark, muted
-  orange — as the accent. A mid-grey background is close to the worst case
-  for contrast against both black and white text, so Light's numbers have
-  much less headroom than Dark's, and `emphasis` (Deep) only clears 3:1
-  there — enough for icons and graphics, not for body text, so nothing in
-  the app sets it as a text colour in Light (the Level screen's readout, for
-  one, stays `onBase` even when "level" — the ring lighting up is the signal).
+  version of the brand pink — as the accent. A mid-grey background is close
+  to the worst case for contrast against both black and white text, so
+  Light's numbers have much less headroom than Dark's, and `emphasis` (Deep)
+  only clears 3:1 there — enough for icons and graphics, not for body text,
+  so nothing in the app sets it as a text colour in Light (the Level screen's
+  readout, for one, stays `onBase` even when "level" — the ring lighting up
+  is the signal).
 - **Camera overlay** (`ConstellationPainter`): lines, the four reticle dots,
   and distance labels are always Neon with a small dark drop shadow,
   regardless of theme — it sits on the live camera feed, not the app's own
@@ -267,13 +273,17 @@ Colours live in `lib/theme.dart` as `Palette`, a `ThemeExtension` reached with
   reason: it's real-world imagery, not app chrome, so it has no theme to follow.
 
 Every text/background combination the app actually uses was checked against
-WCAG's 4.5:1: in Dark, white and Neon on Black (21:1, 6.9:1); in Light,
-`#262626` on the background (5.7:1), white on the bar (6.2:1), and white on
-the card (4.6:1). Secondary/"muted" text is a second solid colour, not the
-primary colour at reduced opacity, so dimming it can't quietly drop it below
-the ratio a screen was checked at — though on Light's bar/card, white already
-has so little headroom that "muted" there is just white again; de-emphasis
-comes from size and weight only.
+WCAG's 4.5:1: in Dark, white on Black (21:1); in Light, `#262626` on the
+background (5.7:1), white on the bar (6.2:1), and white on the card (4.6:1).
+Neon (the brand pink) on Black comes out to 4.47:1 — a hair under the formal
+line — which is used as-is for the two small dark-theme text spots that set
+it (the unit toggle's "on" label, the history badge count); everywhere else
+it's decorative (icons, graphics, the camera overlay), which only needs 3:1.
+Secondary/"muted" text is a second solid colour, not the primary colour at
+reduced opacity, so dimming it can't quietly drop it below the ratio a screen
+was checked at — though on Light's bar/card, white already has so little
+headroom that "muted" there is just white again; de-emphasis comes from size
+and weight only.
 
 Text is set in **JetBrains Mono** (bundled under `assets/fonts/`, OFL-1.1
 licensed — see `assets/fonts/JetBrainsMono/OFL.txt`), the only font in the
@@ -285,7 +295,7 @@ Small filled circles — not diamonds — mark measuring points, the reticle, th
 main button, and the level's bubble. The **app icon** (and the About screen's
 badge, `lib/common/tick_ring_painter.dart`) has no lettering at all: a black
 field, a Neon ring, and black tick marks notched across it at regular
-intervals, like a gauge dial or a length of hazard tape bent into a circle.
+intervals, like a gauge dial.
 The **Showdist wordmark** ("SHOW" over "DIST", `lib/common/wordmark_painter.dart`)
 appears bare — no background, coloured from the theme — at the bottom of the
 main menu, whose background is otherwise a large, continuously drifting ruler
