@@ -13,6 +13,8 @@
 
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <!-- lightMauve, not the theme's white, so nothing flashes white between
+             the launch screen and Flutter's first frame. -->
+        <item name="android:windowBackground">@color/launch_background</item>
     </style>
 </resources>

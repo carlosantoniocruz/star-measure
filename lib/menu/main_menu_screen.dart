@@ -10,7 +10,8 @@ import '../theme.dart';
 
 /// The app's home screen: the SHOWDIST wordmark, then Measure — with its
 /// History sub-menu just beneath — and Leveler. Settings (and About, inside
-/// it) is one tap away, top right; static ruler ticks run along the bottom edge.
+/// it) is one tap away, top right; ruler ticks drift slowly rightward along
+/// the bottom edge.
 class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({super.key, required this.settings, required this.store});
 
@@ -19,7 +20,7 @@ class MainMenuScreen extends StatelessWidget {
   /// Saved measurements, shared with Measure and History.
   final RecordingStore store;
 
-  static const _tickBandHeight = 84.0;
+  static const _tickBandHeight = 92.0;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +35,7 @@ class MainMenuScreen extends StatelessWidget {
               right: 0,
               bottom: 0,
               height: _tickBandHeight,
-              child: CustomPaint(painter: _RulerPainter()),
+              child: _Ruler(),
             ),
             Positioned(
               top: 4,
@@ -166,16 +167,60 @@ class _HistoryLink extends StatelessWidget {
   }
 }
 
-/// Static ruler ticks along the bottom edge, pointing upward — a baseline
-/// lifted a little off the very bottom, with alternating minor/major ticks
-/// rising from it, like a tape measure's edge. Fixed, no animation.
+/// The ruler along the bottom edge, drifting slowly to the right forever.
+/// Held still when the system asks for reduced motion.
+class _Ruler extends StatefulWidget {
+  const _Ruler();
+
+  @override
+  State<_Ruler> createState() => _RulerState();
+}
+
+class _RulerState extends State<_Ruler> with SingleTickerProviderStateMixin {
+  /// One full cycle moves the ticks exactly one major interval, so the loop
+  /// is seamless — about 10 px/s.
+  late final AnimationController _drift = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 12),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _drift.stop();
+    } else if (!_drift.isAnimating) {
+      _drift.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _drift.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Its own layer: the ticks repaint every frame, the rest of the menu doesn't.
+    return RepaintBoundary(
+      child: CustomPaint(painter: _RulerPainter(_drift)),
+    );
+  }
+}
+
+/// Ruler ticks pointing upward — a baseline lifted a little off the very
+/// bottom, with alternating minor/major ticks rising from it, like a tape
+/// measure's edge — shifted right by [drift] (0..1 of one major interval).
 class _RulerPainter extends CustomPainter {
-  const _RulerPainter();
+  _RulerPainter(this.drift) : super(repaint: drift);
+
+  final Animation<double> drift;
 
   static const _minorSpacing = 24.0;
   static const _majorEvery = 5;
-  static const _minorHeight = 24.0;
-  static const _majorHeight = 52.0;
+  static const _minorHeight = 28.0;
+  static const _majorHeight = 60.0;
 
   /// Gap between the baseline and the bottom of the band.
   static const _lift = 16.0;
@@ -187,19 +232,23 @@ class _RulerPainter extends CustomPainter {
     // hierarchy.
     final minor = Paint()
       ..color = Palette.darkCitrine
-      ..strokeWidth = 1.6;
+      ..strokeWidth = 2.6;
     final major = Paint()
       ..color = Palette.darkCitrine
-      ..strokeWidth = 2.4;
+      ..strokeWidth = 4.0;
     final baseline = Paint()
       ..color = Palette.darkCitrine
-      ..strokeWidth = 1.6;
+      ..strokeWidth = 2.6;
 
     final y = size.height - _lift;
     canvas.drawLine(Offset(0, y), Offset(size.width, y), baseline);
 
+    // Start one major interval off the left edge, so ticks slide in from
+    // there as the pattern shifts right.
+    const period = _minorSpacing * _majorEvery;
+    final shift = drift.value * period;
     var i = 0;
-    for (var x = 0.0; x < size.width + _minorSpacing; x += _minorSpacing, i++) {
+    for (var x = shift - period; x < size.width + _minorSpacing; x += _minorSpacing, i++) {
       final isMajor = i % _majorEvery == 0;
       final h = isMajor ? _majorHeight : _minorHeight;
       canvas.drawLine(Offset(x, y), Offset(x, y - h), isMajor ? major : minor);
@@ -207,7 +256,7 @@ class _RulerPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RulerPainter old) => false;
+  bool shouldRepaint(_RulerPainter old) => old.drift != drift;
 }
 
 /// A tool's entry on the main menu: a bordered, tappable block with a label

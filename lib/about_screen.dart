@@ -10,11 +10,8 @@ const _appVersion = '1.0.0';
 
 const _developerEmail = 'sh.run.configs@gmail.com';
 
-// Placeholder — replace with an actual developer bio.
-const _developerBio = 'Write a short developer bio here.';
-
-/// App info that isn't already on the main menu: version, a developer note,
-/// licenses, and a contact address. The main menu already carries the
+/// App info that isn't already on the main menu: version, the developer's
+/// contact address, and licenses. The main menu already carries the
 /// wordmark and a quick-start line for each tool, so neither repeats here.
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -56,9 +53,9 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: 20),
           const Caption('DEVELOPER', color: Palette.warmGray),
           const SizedBox(height: 12),
-          const Text(
-            _developerBio,
-            style: TextStyle(color: Palette.warmGray, fontSize: 14, height: 1.5),
+          const SelectableText(
+            _developerEmail,
+            style: TextStyle(color: Palette.white, fontSize: 15),
           ),
           const SizedBox(height: 28),
           Divider(height: 1, color: Palette.white.withValues(alpha: 0.08)),
@@ -72,14 +69,6 @@ class AboutScreen extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right_rounded, color: Palette.warmGray),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const LicensesScreen()),
-            ),
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Contact', style: TextStyle(color: Palette.white)),
-            subtitle: const SelectableText(
-              _developerEmail,
-              style: TextStyle(color: Palette.warmGray, fontSize: 13),
             ),
           ),
           const SizedBox(height: 24),

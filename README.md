@@ -8,7 +8,7 @@ a plain-text file through the Android share sheet, or copied as text.
 The look is one fixed dark-navy theme, drawn from Sanzo Wada's *A Dictionary
 of Color Combinations* — no light/dark switching, no system-theme following:
 hairline measuring lines in peachRed, a seaGreen aiming reticle, small dots
-for points, and static ruler tick marks along the bottom edge. It is an
+for points, and slowly drifting ruler tick marks along the bottom edge. It is an
 independent project and is not affiliated with Google or Android.
 
 ## Using it
@@ -17,7 +17,8 @@ The app opens straight to a **main menu**: the SHOWDIST wordmark at the top,
 then two tools — **Measure** and **Leveler** — as compact bordered cards,
 Measure the more prominent of the two. Just beneath Measure, **History**
 (with a count of saved measurements) opens the saved list directly, without
-starting the camera. Static ruler tick marks run along the bottom edge.
+starting the camera. Ruler tick marks drift slowly rightward along the bottom
+edge.
 Settings is one tap away, top-right; About is inside Settings.
 
 The AR session doesn't start until you actually tap Measure — opening the
@@ -65,9 +66,9 @@ Reached from the gear icon on the main menu.
   Metric, saved on device and restored on the next launch. The same setting
   drives the in-AR M/FT toggle.
 
-**About**, reached from the settings screen, shows the version, a developer
-section, a licenses page (Flutter, ARCore, and the bundled JetBrains Mono
-font), and a contact email (selectable, to copy).
+**About**, reached from the settings screen, shows the version, a Developer
+section with the developer's contact email (selectable, to copy), and a
+licenses page (Flutter, ARCore, and the bundled JetBrains Mono font).
 
 ## Saving and exporting
 
@@ -177,7 +178,7 @@ Dart (lib/)
                         and the Settings screen
   level/                the accelerometer-driven bubble level
   common/               Caption
-  about_screen.dart     app info: version, developer note, licenses, contact
+  about_screen.dart     app info: version, developer email, licenses
   licenses_screen.dart  a themed licenses screen, walking LicenseRegistry directly
 ```
 
@@ -257,7 +258,7 @@ constants drawn from Sanzo Wada's *A Dictionary of Color Combinations*:
 | --- | --- | --- |
 | `darkTyrianBlue` | `#12354E` | Main background — landing, settings, licences |
 | `olympicBlue` | `#5A82B3` | Secondary accents — selection/toggle state |
-| `lightMauve` | `#9A72AA` | The wordmark and large headings |
+| `lightMauve` | `#9A72AA` | The wordmark and large headings; the launch screen |
 | `darkCitrine` | `#8B835B` | Small decorative details — the main menu's ruler ticks |
 | `peachRed` | `#F15A30` | Actions — the capture button, placed measurement points |
 | `seaGreen` | `#00B49B` | Live/tracking elements — reticle dots, the leveler liquid |
@@ -310,8 +311,16 @@ bordered cards (`peachRed` and `olympicBlue` respectively), Measure the
 larger and more strongly tinted of the two, centred in the space between the
 wordmark and the ruler. **History** hangs off Measure on a thin `peachRed`
 rule, indented, so it reads as part of Measure rather than a third tool.
-Static ruler tick marks — `darkCitrine`, no animation — rise from a baseline
-set just above the bottom edge, like a tape measure's edge.
+Ruler tick marks — `darkCitrine`, bold strokes — rise from a baseline set
+just above the bottom edge, like a tape measure's edge, and drift slowly to
+the right (about 10 px/s, looping seamlessly every major tick); they hold
+still when the system's reduce-motion setting is on.
+
+The **launch screen** is a plain `lightMauve` field — the wordmark's colour —
+on every Android version: `drawable/launch_background.xml` before Android 12,
+`windowSplashScreenBackground` (with the app icon on it) from Android 12 on
+(`values-v31/styles.xml`), and the same colour behind Flutter while it starts,
+so nothing flashes white.
 
 ## License
 

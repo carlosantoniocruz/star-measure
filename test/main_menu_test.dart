@@ -1,3 +1,4 @@
+import 'package:showdist/about_screen.dart';
 import 'package:showdist/level/level_screen.dart';
 import 'package:showdist/measure/history_screen.dart';
 import 'package:showdist/measure/recording.dart';
@@ -80,5 +81,36 @@ void main() {
     await tester.tap(find.text('HISTORY'));
     await tester.pumpAndSettle();
     expect(find.byType(HistoryScreen), findsOneWidget);
+  });
+
+  testWidgets('the ruler keeps drifting, unless reduced motion is on', (tester) async {
+    final s = await settings();
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTheme(),
+      home: MainMenuScreen(settings: s, store: RecordingStore.inMemory()),
+    ));
+    await tester.pump(const Duration(seconds: 1));
+    expect(tester.binding.hasScheduledFrame, isTrue);
+
+    await tester.pumpWidget(MediaQuery(
+      data: const MediaQueryData(disableAnimations: true),
+      child: MaterialApp(
+        theme: buildTheme(),
+        home: MainMenuScreen(settings: s, store: RecordingStore.inMemory()),
+      ),
+    ));
+    await tester.pump();
+    expect(tester.binding.hasScheduledFrame, isFalse);
+  });
+
+  testWidgets('About: Developer shows just the email; no separate Contact', (tester) async {
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const AboutScreen()));
+    expect(find.text('DEVELOPER'), findsOneWidget);
+    expect(find.text('sh.run.configs@gmail.com'), findsOneWidget);
+    expect(find.text('Contact'), findsNothing);
+    expect(
+      tester.getTopLeft(find.text('sh.run.configs@gmail.com')).dy,
+      greaterThan(tester.getTopLeft(find.text('DEVELOPER')).dy),
+    );
   });
 }
