@@ -285,8 +285,8 @@ constants drawn from Sanzo Wada's *A Dictionary of Color Combinations*:
 | Token | Hex | Role |
 | --- | --- | --- |
 | `darkTyrianBlue` | `#12354E` | Main background — landing, settings, licences |
-| `olympicBlue` | `#5A82B3` | Secondary accents — selection/toggle state |
-| `lightMauve` | `#9A72AA` | The wordmark and large headings; the launch screen |
+| `olympicBlue` | `#5A82B3` | Secondary accents — the Settings radio buttons |
+| `lightMauve` | `#9A72AA` | The wordmark and large headings; History's picked rows; the launch screen and app icon background |
 | `darkCitrine` | `#8B835B` | Small decorative details — the main menu's ruler ticks |
 | `peachRed` | `#F15A30` | Actions — the capture button, placed measurement points |
 | `seaGreen` | `#00B49B` | Live/tracking elements — reticle dots, the leveler liquid |
@@ -318,11 +318,13 @@ text too, at 4.9:1.
 - **The leveler**: the vial behind the bubble is `warmGray` — the palette's
   "leveler background" — and the bubble itself is seaGreen once plumb
   ("leveler liquid"), white otherwise.
-- **Selection state** (History's picked rows, the Settings radio buttons)
-  uses `olympicBlue`. Small running text never takes a colour accent — the
-  unit toggle's on/off state and the history badge count are told apart by
-  weight and opacity, not colour, since none of the accents clear 4.5:1 at
-  small sizes.
+- **Selection state**: History's picked rows (tint, sketch, and check mark)
+  use `lightMauve`; the Settings radio buttons use `olympicBlue`. Small
+  running text otherwise never takes a colour accent — the unit toggle's
+  on/off state and the history badge count are told apart by weight and
+  opacity, not colour, since none of the accents clear 4.5:1 at small sizes.
+  The one deliberate exception is the developer email on About, in
+  `lightMauve` (3.26:1).
 
 Text is set in **JetBrains Mono** (bundled under `assets/fonts/`, OFL-1.1
 licensed — see `assets/fonts/JetBrainsMono/OFL.txt`), the only font in the
@@ -330,12 +332,14 @@ app. Its zero is dotted by default; the app turns on the `zero` OpenType
 feature (`FontFeature.slashedZero()`) everywhere so 0/O and 1/l/I stay
 unmistakable.
 
-Small filled circles — not diamonds — mark measuring points, the reticle, the
-main button, and the level's bubble. The **app icon** is an Android adaptive
+Small filled dots mark measuring points, the reticle, the main button, and
+the level's bubble. The **app icon** is an Android adaptive
 icon built from plain vector drawables (`android/app/src/main/res/drawable/
-ic_launcher_*.xml`), no lettering: a `darkTyrianBlue` background, and a
-foreground of three `seaGreen` dots in a triangle around a white centre dot —
-the same reticle motif as the AR overlay. A monochrome layer (the same dots,
+ic_launcher_*.xml`), no lettering: a `lightMauve` background, and a
+foreground of three small `seaGreen` dots in a triangle around a white centre dot,
+within a `darkTyrianBlue` border (the main menu's background) that runs flush
+around the icon's round edge —
+the same reticle motif as the AR overlay. A monochrome layer (the same dots and ring,
 single-coloured) supports Android 13+ themed icons.
 The **SHOWDIST wordmark** — one word, all caps, `lightMauve` — sits at the
 top of the main menu. Below it, **Measure** and **Leveler** are compact

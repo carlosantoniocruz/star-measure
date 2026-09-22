@@ -130,7 +130,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 40),
                   child: Text(
-                    'No measurements yet.\nPlace two or more points, then hold the diamond to save.',
+                    'No measurements yet.\nPlace two or more dots, then hold anywhere on screen to save.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Palette.warmGray, fontSize: 14, height: 1.5),
                   ),
@@ -219,13 +219,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return ListTile(
       key: ValueKey(r.id),
       selected: picked,
-      selectedTileColor: Palette.olympicBlue.withValues(alpha: 0.12),
+      selectedTileColor: Palette.lightMauve.withValues(alpha: 0.12),
       contentPadding: const EdgeInsets.only(left: 16, right: 4),
       leading: SizedBox(
         width: 44,
         height: 44,
         child: CustomPaint(
-          painter: _ShapeThumb(shapeOutline(r.points), picked ? Palette.olympicBlue : Palette.white),
+          painter: _ShapeThumb(shapeOutline(r.points), picked ? Palette.lightMauve : Palette.white),
         ),
       ),
       title: Text(
@@ -241,7 +241,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               padding: const EdgeInsets.only(right: 12),
               child: Icon(
                 picked ? Icons.check_circle_rounded : Icons.circle_outlined,
-                color: picked ? Palette.olympicBlue : Palette.warmGray,
+                color: picked ? Palette.lightMauve : Palette.warmGray,
               ),
             )
           : ShareMenuButton(onSelected: (c) => performShareChoice(context, r, widget.units, c)),

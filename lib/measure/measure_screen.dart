@@ -411,67 +411,64 @@ class _MeasureScreenState extends State<MeasureScreen>
                   valueListenable: _frame,
                   builder: (context, f, _) {
                     final hasPoints = f.points.isNotEmpty;
-                    // Two items each side of the main button keeps it centred.
+                    // Five equal columns, each control centred in its own:
+                    // the same distance between every control's centre, and
+                    // half that from each edge — so the icons read as evenly
+                    // spaced even though the main button is much wider.
                     return Row(
                       children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _Turning(
-                                turns: _turns,
-                                child: ListenableBuilder(
-                                  listenable: widget.store,
-                                  builder: (context, _) => _IconAction(
-                                    icon: Icons.history_rounded,
-                                    tooltip: 'History',
-                                    badge: widget.store.items.length,
-                                    onTap: _showHistory,
-                                  ),
-                                ),
+                        for (final control in <Widget>[
+                          _Turning(
+                            turns: _turns,
+                            child: ListenableBuilder(
+                              listenable: widget.store,
+                              builder: (context, _) => _IconAction(
+                                icon: Icons.history_rounded,
+                                tooltip: 'History',
+                                badge: widget.store.items.length,
+                                onTap: _showHistory,
                               ),
-                              _Turning(
-                                turns: _turns,
-                                child: _IconAction(
-                                  icon: Icons.undo_rounded,
-                                  tooltip: 'Undo last point',
-                                  onTap: hasPoints ? ArChannel.undo : null,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                        // Round and symmetric, so it needs no turning.
-                        AnimatedBuilder(
-                          animation: _charge,
-                          builder: (context, _) => _AddButton(
-                            enabled: f.reticle != null,
-                            charge: _charge.value,
-                            onAdd: _addPoint,
+                          _Turning(
+                            turns: _turns,
+                            child: _IconAction(
+                              icon: Icons.undo_rounded,
+                              tooltip: 'Undo last point',
+                              onTap: hasPoints ? ArChannel.undo : null,
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _Turning(
-                                turns: _turns,
-                                child: _IconAction(
-                                  icon: Icons.close_rounded,
-                                  tooltip: 'Clear all points',
-                                  onTap: hasPoints ? ArChannel.clear : null,
-                                ),
-                              ),
-                              _Turning(
-                                turns: _turns,
-                                child: _UnitToggle(
-                                  value: units,
-                                  onChanged: widget.settings.setUnits,
-                                ),
-                              ),
-                            ],
+                          // Round and symmetric, so it needs no turning.
+                          AnimatedBuilder(
+                            animation: _charge,
+                            builder: (context, _) => _AddButton(
+                              enabled: f.reticle != null,
+                              charge: _charge.value,
+                              onAdd: _addPoint,
+                            ),
                           ),
-                        ),
+                          _Turning(
+                            turns: _turns,
+                            child: _IconAction(
+                              icon: Icons.close_rounded,
+                              tooltip: 'Clear all points',
+                              onTap: hasPoints ? ArChannel.clear : null,
+                            ),
+                          ),
+                          _Turning(
+                            turns: _turns,
+                            child: _UnitToggle(
+                              value: units,
+                              onChanged: widget.settings.setUnits,
+                            ),
+                          ),
+                        ])
+                          Expanded(
+                            // The main button (96) is wider than its fifth of
+                            // a phone-width bar; let it overhang evenly. It
+                            // stays clear of its neighbours' tap areas.
+                            child: OverflowBox(maxWidth: 96, fit: OverflowBoxFit.deferToChild, child: control),
+                          ),
                       ],
                     );
                   },
@@ -553,7 +550,8 @@ class _ControlBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+          // Equal above and below; the row itself spaces the sides.
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: child,
         ),
       ),
@@ -562,8 +560,12 @@ class _ControlBar extends StatelessWidget {
 }
 
 /// Turns [child] to stay upright however the phone is held — one short ease,
-/// no other motion.
+/// no other motion. Sits in a fixed square slot, so every small control on
+/// the bar takes the same room (and turning never changes the layout).
 class _Turning extends StatelessWidget {
+  /// Wide enough for the M / FT toggle, the widest small control.
+  static const _slot = 60.0;
+
   const _Turning({required this.turns, required this.child});
 
   final ValueListenable<int> turns;
@@ -571,15 +573,18 @@ class _Turning extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<int>(
-      valueListenable: turns,
-      builder: (context, q, child) => AnimatedRotation(
-        turns: q / 4,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-        child: child,
+    return SizedBox.square(
+      dimension: _slot,
+      child: ValueListenableBuilder<int>(
+        valueListenable: turns,
+        builder: (context, q, child) => AnimatedRotation(
+          turns: q / 4,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          child: child,
+        ),
+        child: Center(child: child),
       ),
-      child: child,
     );
   }
 }

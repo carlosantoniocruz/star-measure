@@ -7,9 +7,11 @@ import 'package:flutter/material.dart';
 ///
 /// Roles (see call sites for exact usage):
 /// - [darkTyrianBlue] — main background (landing, settings, licences).
-/// - [olympicBlue] — secondary accents (selection/toggle state).
-/// - [lightMauve] — the wordmark and large headings.
-/// - [darkCitrine] — small decorative details (ruler ticks, the app icon).
+/// - [olympicBlue] — secondary accents (the Settings radio buttons).
+/// - [lightMauve] — the wordmark and large headings, History's picked rows,
+///   the developer email on About,
+///   the launch screen, and the app icon's background.
+/// - [darkCitrine] — small decorative details (ruler ticks, the Measure bar's rule).
 /// - [peachRed] — actions: the capture button, placed measurement points.
 /// - [seaGreen] — live/tracking elements: reticle dots, the leveler liquid.
 /// - [warmGray] — the leveler's background, and muted/secondary text.
@@ -21,9 +23,10 @@ import 'package:flutter/material.dart';
 /// leveler's own text) is 5.0:1. The saturated accents ([olympicBlue],
 /// [lightMauve], [darkCitrine], [peachRed]) sit closer to 3.2-3.8:1 against
 /// [darkTyrianBlue] — enough for icons, strokes, and large text (which is
-/// all they're ever used for; small running text always stays white or
-/// warmGray). [seaGreen] is the one accent strong enough for small text too,
-/// at 4.9:1.
+/// all they're ever used for; small running text stays white or warmGray,
+/// with one deliberate exception: the developer email on About is
+/// [lightMauve], at 3.26:1). [seaGreen] is the one accent strong enough for
+/// small text too, at 4.9:1.
 abstract final class Palette {
   static const darkTyrianBlue = Color(0xFF12354E);
   static const olympicBlue = Color(0xFF5A82B3);

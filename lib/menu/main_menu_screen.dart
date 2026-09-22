@@ -55,7 +55,7 @@ class MainMenuScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(28, 0, 28, _tickBandHeight),
               child: Column(
                 children: [
-                  const SizedBox(height: 52),
+                  const SizedBox(height: 76),
                   const Text(
                     'SHOWDIST',
                     style: TextStyle(

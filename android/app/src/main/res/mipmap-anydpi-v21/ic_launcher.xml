@@ -1,25 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Pre-adaptive-icon fallback (API 21-25; this app's minSdk is 24) — no
-     background/foreground/monochrome layering, just the two flattened into
-     one vector, since Android didn't composite adaptive icons before API 26. -->
+     background/foreground/monochrome layering, since Android didn't composite
+     adaptive icons before API 26, and no launcher mask either. So this draws
+     only the part an adaptive-icon launcher would show — the inner 72 of the
+     108 canvas, hence the viewport and the -18 shift — as a round icon: a
+     lightMauve disc with the darkTyrianBlue ring flush with its edge. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="#12354E"
-        android:pathData="M0,0h108v108h-108z" />
-    <path
-        android:fillColor="#00B49B"
-        android:pathData="M45,34 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0" />
-    <path
-        android:fillColor="#00B49B"
-        android:pathData="M62.32,64 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0" />
-    <path
-        android:fillColor="#00B49B"
-        android:pathData="M27.68,64 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M48,54 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+    android:width="72dp"
+    android:height="72dp"
+    android:viewportWidth="72"
+    android:viewportHeight="72">
+    <group
+        android:translateX="-18"
+        android:translateY="-18">
+        <path
+            android:fillColor="#9A72AA"
+            android:pathData="M18,54 a36,36 0 1,0 72,0 a36,36 0 1,0 -72,0" />
+        <path
+            android:fillColor="#00B49B"
+            android:pathData="M47,34 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+        <path
+            android:fillColor="#00B49B"
+            android:pathData="M64.32,64 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+        <path
+            android:fillColor="#00B49B"
+            android:pathData="M29.68,64 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M49.5,54 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0" />
+        <!-- The ring: 3 wide, from radius 33 to the disc's edge at 36. -->
+        <path
+            android:strokeColor="#12354E"
+            android:strokeWidth="3"
+            android:fillColor="#00000000"
+            android:pathData="M19.5,54 a34.5,34.5 0 1,0 69,0 a34.5,34.5 0 1,0 -69,0" />
+    </group>
 </vector>

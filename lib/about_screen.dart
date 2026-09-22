@@ -55,7 +55,7 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: 12),
           const SelectableText(
             _developerEmail,
-            style: TextStyle(color: Palette.white, fontSize: 15),
+            style: TextStyle(color: Palette.lightMauve, fontSize: 15),
           ),
           const SizedBox(height: 28),
           Divider(height: 1, color: Palette.white.withValues(alpha: 0.08)),
