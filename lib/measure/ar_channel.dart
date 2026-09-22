@@ -38,6 +38,17 @@ abstract final class ArChannel {
   static Future<void> undo() => _method.invokeMethod<void>('undo');
   static Future<void> clear() => _method.invokeMethod<void>('clear');
 
+  /// [onHigh] runs (at most once per session) when the native side finds the
+  /// session using too much memory — the system is running short, or this
+  /// session's heap has grown past its budget. Pass null to stop listening.
+  static void onMemoryHigh(VoidCallback? onHigh) {
+    _method.setMethodCallHandler(onHigh == null
+        ? null
+        : (call) async {
+            if (call.method == 'memoryHigh') onHigh();
+          });
+  }
+
   static Stream<ArFrame> frames() => _events
       .receiveBroadcastStream()
       .map((event) => ArFrame.parse((event as List).cast<double>()));

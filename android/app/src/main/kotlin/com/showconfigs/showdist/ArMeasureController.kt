@@ -2,8 +2,10 @@ package com.showconfigs.showdist
 
 import android.Manifest
 import android.app.Activity
+import android.app.ActivityManager
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Debug
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -24,8 +26,9 @@ import io.flutter.plugin.common.MethodChannel
 /**
  * Owns the ARCore [Session] and bridges it to Dart.
  *
- * Method channel `ar_measure/ar`: start, stop, pause, resume, addPoint, undo, clear.
- * Event channel `ar_measure/frames`: one DoubleArray per camera frame (see [ArMeasureView]).
+ * Method channel `ar_measure/ar`: start, stop, pause, resume, addPoint, undo, clear. Native
+ * calls Dart back on the same channel with `memoryHigh` (see [checkMemory]).
+ * Event channel `ar_measure/frames`: one DoubleArray per new camera frame (see [ArMeasureView]).
  */
 class ArMeasureController(
     private val activity: Activity,
@@ -45,9 +48,25 @@ class ArMeasureController(
     private var active = false
     private var sink: EventChannel.EventSink? = null
     private val main = Handler(Looper.getMainLooper())
+    private val channel = MethodChannel(messenger, "ar_measure/ar")
+
+    private val activityManager = activity.getSystemService(ActivityManager::class.java)
+    private val memoryInfo = ActivityManager.MemoryInfo()
+
+    /** How far this process's heap may grow during one session: 1/16 of the device's RAM,
+     *  kept between 256 and 768 MB. ARCore's map of the room (planes, feature points, depth)
+     *  keeps growing the longer and wider a session scans, and it all lives in native memory. */
+    private val heapBudget: Long = run {
+        activityManager.getMemoryInfo(memoryInfo)
+        (memoryInfo.totalMem / 16).coerceIn(256L shl 20, 768L shl 20)
+    }
+
+    // GL thread only.
+    private var heapBaseline = -1L
+    private var memoryReported = false
 
     init {
-        MethodChannel(messenger, "ar_measure/ar").setMethodCallHandler(this)
+        channel.setMethodCallHandler(this)
         EventChannel(messenger, "ar_measure/frames").setStreamHandler(this)
     }
 
@@ -104,6 +123,30 @@ class ArMeasureController(
         if (view === v) view = null
     }
 
+    /**
+     * Called from the GL thread every few seconds while a session runs. Tells Dart, once per
+     * session, when either the system is running short of memory or this session's heap has
+     * grown past [heapBudget] since it started — so the user can be offered a fresh session.
+     * Android 14+ no longer sends apps the onTrimMemory "running low" levels, so this polls.
+     */
+    fun checkMemory() {
+        val heap = Debug.getNativeHeapAllocatedSize() +
+            Runtime.getRuntime().let { it.totalMemory() - it.freeMemory() }
+        if (heapBaseline < 0) {
+            heapBaseline = heap
+            return
+        }
+        if (memoryReported) return
+        activityManager.getMemoryInfo(memoryInfo)
+        val systemLow = memoryInfo.lowMemory || memoryInfo.availMem < memoryInfo.threshold * 3 / 2
+        val grown = heap - heapBaseline > heapBudget
+        if (systemLow || grown) {
+            memoryReported = true
+            Log.i(TAG, "Memory high: heap +${(heap - heapBaseline) shr 20} MB, avail ${memoryInfo.availMem shr 20} MB")
+            main.post { channel.invokeMethod("memoryHigh", null) }
+        }
+    }
+
     fun emit(data: DoubleArray) {
         main.post { sink?.success(data) }
     }
@@ -158,6 +201,8 @@ class ArMeasureController(
             }
             session?.resume()
             active = true
+            heapBaseline = -1L
+            memoryReported = false
             "ready"
         } catch (_: UnavailableDeviceNotCompatibleException) {
             "unsupported"

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../level/level_screen.dart';
@@ -106,6 +109,7 @@ class MainMenuScreen extends StatelessWidget {
 /// Measure's sub-menu: saved measurements, with a live count. Indented and
 /// hung off a peachRed rule so it reads as part of Measure, not a third tool.
 /// History itself is where rows are picked and bulk-shared or copied.
+/// Hidden entirely until at least one measurement has been saved.
 class _HistoryLink extends StatelessWidget {
   const _HistoryLink({required this.store, required this.onTap});
 
@@ -114,6 +118,17 @@ class _HistoryLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: store,
+      builder: (context, _) {
+        final n = store.items.length;
+        if (n == 0) return const SizedBox.shrink();
+        return _link(n);
+      },
+    );
+  }
+
+  Widget _link(int n) {
     return Padding(
       padding: const EdgeInsets.only(left: 20),
       child: Row(
@@ -127,35 +142,29 @@ class _HistoryLink extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
-                  child: ListenableBuilder(
-                    listenable: store,
-                    builder: (context, _) {
-                      final n = store.items.length;
-                      return Row(
-                        children: [
-                          const Icon(Icons.history_rounded, color: Palette.warmGray, size: 18),
-                          const SizedBox(width: 10),
-                          const Text(
-                            'HISTORY',
-                            style: TextStyle(
-                              fontFamily: showdistFontFamily,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.5,
-                              fontSize: 13,
-                              color: Palette.white,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              n == 1 ? '1 saved' : '$n saved',
-                              style: const TextStyle(color: Palette.warmGray, fontSize: 12),
-                            ),
-                          ),
-                          const Icon(Icons.chevron_right_rounded, color: Palette.warmGray, size: 20),
-                        ],
-                      );
-                    },
+                  child: Row(
+                    children: [
+                      const Icon(Icons.history_rounded, color: Palette.warmGray, size: 18),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'HISTORY',
+                        style: TextStyle(
+                          fontFamily: showdistFontFamily,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.5,
+                          fontSize: 13,
+                          color: Palette.white,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          n == 1 ? '1 saved' : '$n saved',
+                          style: const TextStyle(color: Palette.warmGray, fontSize: 12),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: Palette.warmGray, size: 20),
+                    ],
                   ),
                 ),
               ),
@@ -169,6 +178,12 @@ class _HistoryLink extends StatelessWidget {
 
 /// The ruler along the bottom edge, drifting slowly to the right forever.
 /// Held still when the system asks for reduced motion.
+///
+/// Stepped by a ~30 fps timer rather than an [AnimationController]: at about
+/// 10 px/s a step is a third of a pixel, indistinguishable from the display's
+/// 60-120 Hz, and it costs a quarter (or less) of the frames. The timer only
+/// runs while the menu is the visible route ([TickerMode]) and the app is in
+/// the foreground.
 class _Ruler extends StatefulWidget {
   const _Ruler();
 
@@ -176,33 +191,62 @@ class _Ruler extends StatefulWidget {
   State<_Ruler> createState() => _RulerState();
 }
 
-class _RulerState extends State<_Ruler> with SingleTickerProviderStateMixin {
+class _RulerState extends State<_Ruler> with WidgetsBindingObserver {
   /// One full cycle moves the ticks exactly one major interval, so the loop
-  /// is seamless — about 10 px/s.
-  late final AnimationController _drift = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 12),
-  );
+  /// is seamless.
+  static const _cycle = Duration(seconds: 12);
+  static const _step = Duration(milliseconds: 33);
+
+  /// 0..1 through the current cycle. Advanced a fixed amount per tick, so a
+  /// late tick just slows the drift for a moment instead of jumping.
+  final _drift = ValueNotifier<double>(0);
+  Timer? _timer;
+  bool _visible = true;
+  bool _reducedMotion = false;
+  bool _foreground = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _drift.stop();
-    } else if (!_drift.isAnimating) {
-      _drift.repeat();
+    _visible = TickerMode.valuesOf(context).enabled;
+    _reducedMotion = MediaQuery.disableAnimationsOf(context);
+    _sync();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    _sync();
+  }
+
+  void _sync() {
+    final run = _visible && _foreground && !_reducedMotion;
+    if (run && _timer == null) {
+      final perTick = _step.inMicroseconds / _cycle.inMicroseconds;
+      _timer = Timer.periodic(_step, (_) => _drift.value = (_drift.value + perTick) % 1);
+    } else if (!run && _timer != null) {
+      _timer!.cancel();
+      _timer = null;
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _timer?.cancel();
     _drift.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Its own layer: the ticks repaint every frame, the rest of the menu doesn't.
+    // Its own layer: the ticks repaint on every step, the rest of the menu doesn't.
     return RepaintBoundary(
       child: CustomPaint(painter: _RulerPainter(_drift)),
     );
@@ -215,7 +259,7 @@ class _RulerState extends State<_Ruler> with SingleTickerProviderStateMixin {
 class _RulerPainter extends CustomPainter {
   _RulerPainter(this.drift) : super(repaint: drift);
 
-  final Animation<double> drift;
+  final ValueListenable<double> drift;
 
   static const _minorSpacing = 24.0;
   static const _majorEvery = 5;

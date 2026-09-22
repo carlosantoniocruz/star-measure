@@ -15,9 +15,9 @@ independent project and is not affiliated with Google or Android.
 
 The app opens straight to a **main menu**: the SHOWDIST wordmark at the top,
 then two tools — **Measure** and **Leveler** — as compact bordered cards,
-Measure the more prominent of the two. Just beneath Measure, **History**
-(with a count of saved measurements) opens the saved list directly, without
-starting the camera. Ruler tick marks drift slowly rightward along the bottom
+Measure the more prominent of the two. Once at least one measurement has been
+saved, **History** appears just beneath Measure (with a count of saved
+measurements) and opens the saved list directly, without starting the camera. Ruler tick marks drift slowly rightward along the bottom
 edge.
 Settings is one tap away, top-right; About is inside Settings.
 
@@ -38,7 +38,11 @@ main menu never touches the camera.
    it. The button's ring fills as you hold, wherever your thumb actually is.
    The screen clears, ready for the next one.
 
-The bottom row, left to right:
+The controls sit on a solid bar along the bottom — `darkTyrianBlue` under a
+`darkCitrine` rule, like the main menu — with the camera filling the space
+above it. The screen stays in portrait, but when the phone is turned sideways
+the buttons on the bar turn to stay upright; the bar itself doesn't move.
+Left to right:
 
 | Control | Action |
 | --- | --- |
@@ -49,8 +53,15 @@ The bottom row, left to right:
 | Close | Clear all points without saving |
 | M / FT | Metric or imperial display |
 
-Up to 24 points per measurement. Portrait only. The system back gesture/button
-returns to the main menu.
+Up to 24 points per measurement. The system back gesture/button returns to the
+main menu.
+
+If a session starts using too much memory — the phone is running short, or
+the session's heap has grown past its budget (1/16 of the device's RAM, kept
+between 256 MB and 768 MB) — Showdist asks once whether to **start a new
+session**, saving the current measurement first if there is one. A fresh
+session releases ARCore's map of everything scanned so far. "Not now" keeps
+measuring.
 
 **Level.** A bubble level for things mounted on a wall — a shelf, a picture
 frame, a TV bracket — using the accelerometer. Hold the phone upright and flat
@@ -177,12 +188,13 @@ Dart (lib/)
                         storage, sharing, the history screen and detail sheet,
                         and the Settings screen
   level/                the accelerometer-driven bubble level
-  common/               Caption
+  common/               Caption, DeviceTurns (which way the phone is held)
   about_screen.dart     app info: version, developer email, licenses
   licenses_screen.dart  a themed licenses screen, walking LicenseRegistry directly
 ```
 
-Each camera frame the native side sends one flat `DoubleArray`. Anchor
+For each new camera image (~30 a second, even though the view redraws at the
+display's 60-120 Hz) the native side sends one flat `DoubleArray`. Anchor
 positions are projected to screen coordinates natively, so Dart never needs the
 camera matrices:
 
@@ -203,6 +215,22 @@ improves accuracy on walls and objects.
 
 The camera view is hosted with hybrid composition so the Flutter overlay can
 draw above it.
+
+
+### Staying light on resources
+
+- **Measure** does its per-frame work (hit test, projecting anchors, the
+  message to Dart) only when ARCore has a new camera image, not on every
+  display refresh, and counts tracked planes a few times a second rather than
+  every frame. The overlay repaints when a frame arrives, so the reticle's
+  turn costs nothing extra and nothing repaints while the session is paused.
+- **Pausing:** covering Measure with History pauses the AR session and the
+  orientation sensor; leaving it stops both.
+- **Orientation** for the bar's buttons is read at the accelerometer's
+  slowest standard rate (5 Hz), with a dead zone so the buttons don't flicker.
+- **The menu ruler** steps about 30 times a second on a timer, only while the
+  menu is on screen and the app is in the foreground.
+- **Memory** is checked every few seconds during a session (see above).
 
 ## Testing
 
@@ -314,7 +342,8 @@ top of the main menu. Below it, **Measure** and **Leveler** are compact
 bordered cards (`peachRed` and `olympicBlue` respectively), Measure the
 larger and more strongly tinted of the two, centred in the space between the
 wordmark and the ruler. **History** hangs off Measure on a thin `peachRed`
-rule, indented, so it reads as part of Measure rather than a third tool.
+rule, indented, so it reads as part of Measure rather than a third tool; it
+only appears once something has been saved.
 Ruler tick marks — `darkCitrine`, bold strokes — rise from a baseline set
 just above the bottom edge, like a tape measure's edge, and drift slowly to
 the right (about 10 px/s, looping seamlessly every major tick); they hold

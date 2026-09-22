@@ -58,6 +58,12 @@ class ArMeasureView(
     private var geometryDirty = true
     private var boundSession: Session? = null
 
+    // GL thread only. The view redraws at the display's rate (up to 120 Hz), but the camera
+    // delivers ~30 images a second: hit testing and messaging Dart only happen on a new one.
+    private var lastTimestamp = 0L
+    private var newFrames = 0
+    private var planes = 0
+
     // GL thread only.
     private val anchors = ArrayList<Anchor>()
     private val addRequested = AtomicBoolean(false)
@@ -122,6 +128,8 @@ class ArMeasureView(
                 boundSession = session
                 geometryDirty = true
                 anchors.clear()
+                lastTimestamp = 0L
+                newFrames = 0
             }
             if (geometryDirty) {
                 session.setDisplayGeometry(controller.displayRotation(), width, height)
@@ -136,6 +144,10 @@ class ArMeasureView(
                 return
             }
             background.draw(frame)
+            if (frame.timestamp == lastTimestamp) return
+            lastTimestamp = frame.timestamp
+            newFrames++
+            if (newFrames % MEMORY_CHECK_EVERY == 0) controller.checkMemory()
             controller.emit(buildPayload(session, frame))
         }
     }
@@ -144,9 +156,13 @@ class ArMeasureView(
         val camera = frame.camera
         val tracking = camera.trackingState == TrackingState.TRACKING
 
-        var planes = 0
-        for (plane in session.getAllTrackables(Plane::class.java)) {
-            if (plane.trackingState == TrackingState.TRACKING && plane.subsumedBy == null) planes++
+        // Only used for the "scan surfaces" hint, so a few times a second is plenty;
+        // getAllTrackables allocates a fresh collection on every call.
+        if (newFrames % PLANE_COUNT_EVERY == 1) {
+            planes = 0
+            for (plane in session.getAllTrackables(Plane::class.java)) {
+                if (plane.trackingState == TrackingState.TRACKING && plane.subsumedBy == null) planes++
+            }
         }
 
         if (tracking) {
@@ -233,6 +249,8 @@ class ArMeasureView(
         const val HEADER = 10
         const val STRIDE = 6
         const val MAX_POINTS = 24
+        const val PLANE_COUNT_EVERY = 10 // new camera frames, ~3 times a second
+        const val MEMORY_CHECK_EVERY = 90 // new camera frames, ~every 3 seconds
         const val NEAR = 0.05f
         const val FAR = 100f
     }

@@ -1,14 +1,14 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show Factory;
+import 'package:flutter/foundation.dart' show Factory, ValueListenable;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../common/caption.dart';
+import '../common/device_turns.dart';
 import '../settings.dart';
 import '../theme.dart';
 import 'ar_channel.dart' show ArChannel, arRouteObserver;
@@ -46,10 +46,20 @@ class _Problem {
 }
 
 class _MeasureScreenState extends State<MeasureScreen>
-    with WidgetsBindingObserver, RouteAware, TickerProviderStateMixin {
+    with WidgetsBindingObserver, RouteAware, SingleTickerProviderStateMixin {
   final _frame = ValueNotifier<ArFrame>(ArFrame.empty);
+
+  /// Seconds since the screen opened, for the reticle's slow turn. Advanced
+  /// when a camera frame arrives (~30 a second) rather than by a per-display-
+  /// frame ticker, so the overlay repaints at the camera's rate — not 60-120
+  /// times a second — and not at all while the session is paused.
   final _time = ValueNotifier<double>(0);
-  late final Ticker _ticker = createTicker((d) => _time.value = d.inMicroseconds / 1e6);
+  final _clock = Stopwatch()..start();
+
+  /// Which way the phone is held; the bar's buttons turn to match.
+  final _turns = DeviceTurns();
+
+  bool _memoryPromptShowing = false;
 
   /// Hold anywhere on screen to save: shared by the full-screen gesture
   /// detector and the button's own charge-ring display.
@@ -71,7 +81,8 @@ class _MeasureScreenState extends State<MeasureScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _ticker.start();
+    ArChannel.onMemoryHigh(_onMemoryHigh);
+    _turns.start();
     _begin();
   }
 
@@ -87,8 +98,9 @@ class _MeasureScreenState extends State<MeasureScreen>
     WidgetsBinding.instance.removeObserver(this);
     arRouteObserver.unsubscribe(this);
     _sub?.cancel();
+    ArChannel.onMemoryHigh(null);
     ArChannel.stop();
-    _ticker.dispose();
+    _turns.dispose();
     _charge.dispose();
     _frame.dispose();
     _time.dispose();
@@ -97,17 +109,79 @@ class _MeasureScreenState extends State<MeasureScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && (_problem?.retryOnResume ?? false)) _begin();
+    if (state == AppLifecycleState.resumed) {
+      _turns.start();
+      if (_problem?.retryOnResume ?? false) _begin();
+    } else if (state == AppLifecycleState.paused) {
+      _turns.stop();
+    }
   }
 
   /// Another route (History) was pushed on top of this one — pause the
   /// session in place rather than tearing it down; points and anchors survive.
   @override
-  void didPushNext() => ArChannel.pause();
+  void didPushNext() {
+    ArChannel.pause();
+    _turns.stop();
+  }
 
   /// Back from that route — resume where we left off.
   @override
-  void didPopNext() => ArChannel.resume();
+  void didPopNext() {
+    ArChannel.resume();
+    _turns.start();
+  }
+
+  /// The native side found this session using too much memory. Offer to save
+  /// what's on screen (if there's a measurement) and start a fresh session,
+  /// which releases ARCore's map of everything scanned so far. Asked once per
+  /// session; "Not now" keeps measuring.
+  Future<void> _onMemoryHigh() async {
+    if (!mounted || !_running || _memoryPromptShowing) return;
+    final canSave = _frame.value.points.length >= 2;
+    _memoryPromptShowing = true;
+    final restart = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Palette.darkTyrianBlue,
+        title: const Text(
+          'Start a new session?',
+          style: TextStyle(color: Palette.white, fontSize: 18, fontWeight: FontWeight.w400),
+        ),
+        content: Text(
+          canSave
+              ? 'This session is using a lot of memory. Save this measurement and start fresh to keep '
+                  'things running smoothly.'
+              : 'This session is using a lot of memory. Start fresh to keep things running smoothly.',
+          style: const TextStyle(color: Palette.warmGray, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            style: TextButton.styleFrom(foregroundColor: Palette.warmGray),
+            child: const Text('Not now'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Palette.peachRed),
+            child: Text(canSave ? 'Save & start new' : 'Start new'),
+          ),
+        ],
+      ),
+    );
+    _memoryPromptShowing = false;
+    if (restart != true || !mounted) return;
+
+    final points = _frame.value.points;
+    if (points.length >= 2) {
+      await widget.store.add(Recording.fromPoints(points));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved to History')));
+    }
+    await ArChannel.stop();
+    _frame.value = ArFrame.empty;
+    if (mounted) await _begin();
+  }
 
   Future<void> _begin() async {
     setState(() {
@@ -133,7 +207,10 @@ class _MeasureScreenState extends State<MeasureScreen>
     if (!mounted) return;
     switch (status) {
       case 'ready':
-        _sub ??= ArChannel.frames().listen((f) => _frame.value = f);
+        _sub ??= ArChannel.frames().listen((f) {
+          _frame.value = f;
+          _time.value = _clock.elapsedMicroseconds / 1e6;
+        });
         setState(() => _running = true);
       case 'installRequested':
         _fail(const _Problem(
@@ -255,126 +332,149 @@ class _MeasureScreenState extends State<MeasureScreen>
         listenable: widget.settings,
         builder: (context, _) {
           final units = widget.settings.units;
-          return Stack(
-            fit: StackFit.expand,
+          // The camera fills only the space above the control bar, so nothing
+          // measured ever hides behind it — and the reticle sits at the centre
+          // of what's actually visible.
+          return Column(
             children: [
-              const _ArView(),
-              const IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    // darkTyrianBlue, faded in from transparent — a scrim so
-                    // the white/peachRed/seaGreen overlay reads against any
-                    // real-world background, without resorting to plain black.
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0x9912354E), Color(0x0012354E), Color(0x0012354E), Color(0xAA12354E)],
-                      stops: [0, 0.18, 0.72, 1],
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    const _ArView(),
+                    const IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          // darkTyrianBlue, faded in from transparent at the
+                          // top only — a scrim for the hint and total.
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0x9912354E), Color(0x0012354E)],
+                            stops: [0, 0.22],
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              IgnorePointer(
-                child: CustomPaint(
-                  painter: ConstellationPainter(frame: _frame, time: _time, units: units),
-                ),
-              ),
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
-                  child: Column(
-                    children: [
-                      ValueListenableBuilder<ArFrame>(
-                        valueListenable: _frame,
-                        builder: (context, f, _) => Column(
-                          children: [
-                            _Hint(text: _hint(f), color: Palette.white),
-                            if (f.points.length >= 2) ...[
-                              const SizedBox(height: 6),
-                              // The same black 50% scrim as the on-camera
-                              // distance labels (constellation_painter.dart).
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: labelScrim,
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                  child: Text(
-                                    formatLength(f.totalLength, units),
-                                    style: TextStyle(
-                                      fontFamily: showdistFontFamily,
-                                      color: Palette.white,
-                                      fontSize: 34,
-                                      fontWeight: FontWeight.w200,
-                                      fontFeatures: [...showdistFontFeatures, const FontFeature.tabularFigures()],
+                    IgnorePointer(
+                      child: CustomPaint(
+                        painter: ConstellationPainter(frame: _frame, time: _time, units: units),
+                      ),
+                    ),
+                    SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 16, 12, 0),
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: ValueListenableBuilder<ArFrame>(
+                            valueListenable: _frame,
+                            builder: (context, f, _) => Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _Hint(text: _hint(f), color: Palette.white),
+                                if (f.points.length >= 2) ...[
+                                  const SizedBox(height: 6),
+                                  // The same black 50% scrim as the on-camera
+                                  // distance labels (constellation_painter.dart).
+                                  DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: labelScrim,
+                                      borderRadius: BorderRadius.circular(14),
                                     ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                      child: Text(
+                                        formatLength(f.totalLength, units),
+                                        style: TextStyle(
+                                          fontFamily: showdistFontFamily,
+                                          color: Palette.white,
+                                          fontSize: 34,
+                                          fontWeight: FontWeight.w200,
+                                          fontFeatures: [...showdistFontFeatures, const FontFeature.tabularFigures()],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _ControlBar(
+                child: ValueListenableBuilder<ArFrame>(
+                  valueListenable: _frame,
+                  builder: (context, f, _) {
+                    final hasPoints = f.points.isNotEmpty;
+                    // Two items each side of the main button keeps it centred.
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _Turning(
+                                turns: _turns,
+                                child: ListenableBuilder(
+                                  listenable: widget.store,
+                                  builder: (context, _) => _IconAction(
+                                    icon: Icons.history_rounded,
+                                    tooltip: 'History',
+                                    badge: widget.store.items.length,
+                                    onTap: _showHistory,
                                   ),
                                 ),
                               ),
+                              _Turning(
+                                turns: _turns,
+                                child: _IconAction(
+                                  icon: Icons.undo_rounded,
+                                  tooltip: 'Undo last point',
+                                  onTap: hasPoints ? ArChannel.undo : null,
+                                ),
+                              ),
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      ValueListenableBuilder<ArFrame>(
-                        valueListenable: _frame,
-                        builder: (context, f, _) {
-                          final hasPoints = f.points.isNotEmpty;
-                          // Two items each side of the main button keeps it centred.
-                          return Row(
+                        // Round and symmetric, so it needs no turning.
+                        AnimatedBuilder(
+                          animation: _charge,
+                          builder: (context, _) => _AddButton(
+                            enabled: f.reticle != null,
+                            charge: _charge.value,
+                            onAdd: _addPoint,
+                          ),
+                        ),
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              Expanded(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    ListenableBuilder(
-                                      listenable: widget.store,
-                                      builder: (context, _) => _IconAction(
-                                        icon: Icons.history_rounded,
-                                        tooltip: 'History',
-                                        badge: widget.store.items.length,
-                                        onTap: _showHistory,
-                                      ),
-                                    ),
-                                    _IconAction(
-                                      icon: Icons.undo_rounded,
-                                      tooltip: 'Undo last point',
-                                      onTap: hasPoints ? ArChannel.undo : null,
-                                    ),
-                                  ],
+                              _Turning(
+                                turns: _turns,
+                                child: _IconAction(
+                                  icon: Icons.close_rounded,
+                                  tooltip: 'Clear all points',
+                                  onTap: hasPoints ? ArChannel.clear : null,
                                 ),
                               ),
-                              AnimatedBuilder(
-                                animation: _charge,
-                                builder: (context, _) => _AddButton(
-                                  enabled: f.reticle != null,
-                                  charge: _charge.value,
-                                  onAdd: _addPoint,
-                                ),
-                              ),
-                              Expanded(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    _IconAction(
-                                      icon: Icons.close_rounded,
-                                      tooltip: 'Clear all points',
-                                      onTap: hasPoints ? ArChannel.clear : null,
-                                    ),
-                                    _UnitToggle(
-                                      value: units,
-                                      onChanged: widget.settings.setUnits,
-                                    ),
-                                  ],
+                              _Turning(
+                                turns: _turns,
+                                child: _UnitToggle(
+                                  value: units,
+                                  onChanged: widget.settings.setUnits,
                                 ),
                               ),
                             ],
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -431,6 +531,55 @@ class _ArView extends StatelessWidget {
           ..addOnPlatformViewCreatedListener(params.onPlatformViewCreated)
           ..create();
       },
+    );
+  }
+}
+
+/// The solid control bar along the bottom, styled like the main menu: a
+/// darkTyrianBlue field under a darkCitrine rule (the menu ruler's baseline).
+/// It stays put when the phone turns; only the buttons on it rotate.
+class _ControlBar extends StatelessWidget {
+  const _ControlBar({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Palette.darkTyrianBlue,
+        border: Border(top: BorderSide(color: Palette.darkCitrine, width: 1.5)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// Turns [child] to stay upright however the phone is held — one short ease,
+/// no other motion.
+class _Turning extends StatelessWidget {
+  const _Turning({required this.turns, required this.child});
+
+  final ValueListenable<int> turns;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: turns,
+      builder: (context, q, child) => AnimatedRotation(
+        turns: q / 4,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        child: child,
+      ),
+      child: child,
     );
   }
 }
