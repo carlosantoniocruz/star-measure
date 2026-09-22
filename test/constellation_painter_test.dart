@@ -1,6 +1,7 @@
 import 'package:showdist/measure/ar_frame.dart';
 import 'package:showdist/measure/constellation_painter.dart';
 import 'package:showdist/measure/units.dart';
+import 'package:showdist/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -111,5 +112,73 @@ void main() {
       final ro = await pumpOverlay(tester, frameOf([pt(0, 0.2, 0.5)], reticle: pt(1, 0.5, 0.5)));
       expect(ro, paints..rrect());
     });
+  });
+
+  group('reticle', () {
+    /// Every circle the painter draws at time [t], as (centre, ARGB colour).
+    /// Colours are compared as 32-bit ARGB: a [Paint] stores them as floats,
+    /// so a round-trip through one isn't `==` to the original constant.
+    List<(Offset, int)> circles(ArFrame frame, double t) {
+      final canvas = TestRecordingCanvas();
+      ConstellationPainter(frame: ValueNotifier(frame), time: ValueNotifier(t), units: UnitSystem.metric)
+          .paint(canvas, _screen);
+      return [
+        for (final call in canvas.invocations)
+          if (call.invocation.memberName == #drawCircle)
+            (
+              call.invocation.positionalArguments[0] as Offset,
+              (call.invocation.positionalArguments[2] as Paint).color.toARGB32(),
+            ),
+      ];
+    }
+
+    final aimed = frameOf([], reticle: pt(0, 0.5, 0.5));
+    final centre = _screen.center(Offset.zero);
+
+    List<Offset> dots(double t) => [for (final (at, color) in circles(aimed, t)) if (color == Palette.seaGreen.toARGB32()) at];
+
+    test('three seaGreen dots in a triangle, the first straight up', () {
+      final d = dots(0);
+      expect(d, hasLength(3));
+      expect(d[0].dx, closeTo(centre.dx, 1e-6));
+      expect(d[0].dy, closeTo(centre.dy - 22, 1e-6));
+      // Equilateral: every side the same length.
+      final sides = [(d[0] - d[1]).distance, (d[1] - d[2]).distance, (d[2] - d[0]).distance];
+      for (final side in sides) {
+        expect(side, closeTo(22 * 1.7320508, 1e-6));
+      }
+    });
+
+    test('a white centre dot', () {
+      expect(circles(aimed, 0).where((c) => c.$1 == centre && c.$2 == Palette.white.toARGB32()), hasLength(1));
+    });
+
+    test('turns clockwise, one full turn per period', () {
+      final quarter = dots(reticlePeriod / 4)[0];
+      expect(quarter.dx, closeTo(centre.dx + 22, 1e-6), reason: 'a quarter turn puts the top dot at the right');
+      expect(quarter.dy, closeTo(centre.dy, 1e-6));
+      final full = dots(reticlePeriod)[0];
+      expect(full.dx, closeTo(centre.dx, 1e-6));
+      expect(full.dy, closeTo(centre.dy - 22, 1e-6));
+      expect(reticlePeriod, inInclusiveRange(10, 12));
+    });
+
+    test('every reticle dot has a dark drop shadow beneath it', () {
+      final all = circles(aimed, 0);
+      // Black (RGB 0) and translucent.
+      final shadows = all.where((c) => c.$2 & 0xFFFFFF == 0 && c.$2 >>> 24 < 0x80);
+      expect(shadows, hasLength(4), reason: 'three dots plus the centre');
+    });
+
+    test('placed points are peachRed', () {
+      final placed = circles(frameOf([pt(0, 0.3, 0.5), pt(1, 0.7, 0.5)]), 0);
+      expect(placed.where((c) => c.$2 == Palette.peachRed.toARGB32()), hasLength(2));
+    });
+  });
+
+  testWidgets('distance labels sit on a black 50% scrim', (tester) async {
+    final ro = await pumpOverlay(tester, frameOf([pt(0, 0.3, 0.5), pt(1, 0.7, 0.5)]));
+    expect(ro, paints..rrect(color: labelScrim));
+    expect(labelScrim, const Color(0x80000000));
   });
 }

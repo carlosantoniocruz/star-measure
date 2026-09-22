@@ -291,13 +291,25 @@ class _MeasureScreenState extends State<MeasureScreen>
                             _Hint(text: _hint(f), color: Palette.white),
                             if (f.points.length >= 2) ...[
                               const SizedBox(height: 6),
-                              Text(
-                                formatLength(f.totalLength, units),
-                                style: TextStyle(
-                                  color: Palette.white,
-                                  fontSize: 34,
-                                  fontWeight: FontWeight.w200,
-                                  fontFeatures: [...showdistFontFeatures, const FontFeature.tabularFigures()],
+                              // The same black 50% scrim as the on-camera
+                              // distance labels (constellation_painter.dart).
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: labelScrim,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                  child: Text(
+                                    formatLength(f.totalLength, units),
+                                    style: TextStyle(
+                                      fontFamily: showdistFontFamily,
+                                      color: Palette.white,
+                                      fontSize: 34,
+                                      fontWeight: FontWeight.w200,
+                                      fontFeatures: [...showdistFontFeatures, const FontFeature.tabularFigures()],
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -569,9 +581,9 @@ class _AddButtonPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final radius = size.width / 2 - 2;
-    // peachRed — "actions: the capture button" — once the reticle is on a
-    // surface; a dim white ring otherwise.
-    final accent = lit ? Palette.peachRed : Palette.white.withValues(alpha: 0.35);
+    // peachRed — "actions: the capture button" — full strength once the
+    // reticle is on a surface, faded while there's nowhere to place a point.
+    final accent = lit ? Palette.peachRed : Palette.peachRed.withValues(alpha: 0.4);
 
     canvas.drawCircle(
       c,

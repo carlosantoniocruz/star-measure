@@ -28,8 +28,8 @@ main menu never touches the camera.
 
 1. Allow camera access. If the phone lacks Google Play Services for AR, the app
    offers to install it.
-2. Move the phone slowly so ARCore can find surfaces. The four dots around
-   the screen centre light up when they are on a surface.
+2. Move the phone slowly so ARCore can find surfaces. The three dots slowly
+   circling the screen centre turn solid when they are on a surface.
 3. **Tap** the large button to place a point. Each new point adds a
    segment with its length, and a dashed line shows the live distance from the
    last point to the reticle.
@@ -275,14 +275,18 @@ strokes, and large text, which is all they're ever used for; small running
 text always stays white or `warmGray`. `seaGreen` is strong enough for small
 text too, at 4.9:1.
 
-- **Camera overlay** (`ConstellationPainter`): confirmed points, the lines
-  between them, and their labels are peachRed. The reticle's four dots and
-  the dashed line reaching for it are seaGreen, distinguishing what's still
-  live from what's already placed; the reticle's centre dot and the live
-  label (the one that changes as the phone moves) are white. A drop shadow
-  under the overlay graphics uses `darkTyrianBlue`, not plain black, so it
-  still reads as part of the app's own palette against any real-world
-  background.
+- **Camera overlay** (`ConstellationPainter`): confirmed points and the
+  lines between them are peachRed, as is the capture button (faded until
+  there's a surface to place on). The reticle is three seaGreen dots in a
+  triangle around a white centre dot — the app icon's motif — turning
+  clockwise once every 11 seconds, over a soft black drop shadow so it holds
+  up on bright walls and floors. The dashed line reaching for it is seaGreen
+  too, distinguishing what's still live from what's already placed.
+- **Measurement numbers** — every segment label, the live distance to the
+  reticle, and the running total at the top — are white JetBrains Mono on a
+  rounded black scrim at 50%, readable on any camera background. The live
+  label adds a seaGreen hairline border. The other overlay lines keep a
+  `darkTyrianBlue` drop shadow.
 - **The leveler**: the vial behind the bubble is `warmGray` — the palette's
   "leveler background" — and the bubble itself is seaGreen once plumb
   ("leveler liquid"), white otherwise.

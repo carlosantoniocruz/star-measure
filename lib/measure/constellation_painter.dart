@@ -30,11 +30,25 @@ Paint _shadowOf(Paint base) => Paint()
   ..strokeCap = base.strokeCap
   ..maskFilter = const MaskFilter.blur(BlurStyle.normal, _shadowBlur);
 
-const _labelShadow = [Shadow(color: _shadowColor, blurRadius: 3, offset: Offset(0, 1))];
+/// The reticle's drop shadow: black, softer and wider than [_shadowColor], so
+/// the seaGreen dots and white centre hold up against bright walls, windows,
+/// and sunlit floors, where a darkTyrianBlue shadow would all but vanish.
+const _reticleShadow = Color(0x66000000); // black at 40%
+const _reticleShadowOffset = Offset(0, 1.5);
+const _reticleShadowBlur = 2.5;
+
+/// Behind every distance label: black at 50%, rounded — dark enough for
+/// white text on any camera background, light enough to see through. Also
+/// behind the Measure screen's running total.
+const labelScrim = Color(0x80000000);
+
+/// One reticle turn every [reticlePeriod] seconds.
+@visibleForTesting
+const reticlePeriod = 11.0;
 
 /// Draws measurements over the camera feed with as little as possible: small
-/// dots for points, hairlines between them, a quiet pill for each distance,
-/// and four tiny dots as the aiming reticle.
+/// dots for points, hairlines between them, white numbers on a dark pill for
+/// each distance, and three dots circling a white centre as the aiming reticle.
 class ConstellationPainter extends CustomPainter {
   ConstellationPainter({
     required this.frame,
@@ -100,17 +114,35 @@ class ConstellationPainter extends CustomPainter {
   static bool labelVisible(Offset at, Size size) =>
       at.dx >= 0 && at.dx <= size.width && at.dy >= 0 && at.dy <= size.height;
 
+  /// Three seaGreen dots in an equilateral triangle, turning slowly clockwise
+  /// around a white centre dot — the app icon's motif. Solid once the
+  /// reticle is on a surface; hollow and faded while it's still searching.
   void _reticle(Canvas canvas, Offset c, double t, {required bool hit}) {
     const ringRadius = 22.0;
     final paint = Paint()
       ..style = hit ? PaintingStyle.fill : PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..color = _tracking.withValues(alpha: hit ? 1 : 0.5);
-    for (var k = 0; k < 4; k++) {
-      final p = c + Offset.fromDirection(t * 0.4 + k * math.pi / 2, ringRadius);
-      _drawShadowedCircle(canvas, p, 4.5, paint);
+      ..strokeWidth = 1.6
+      ..color = _tracking.withValues(alpha: hit ? 1 : 0.6);
+    final spin = t * 2 * math.pi / reticlePeriod;
+    for (var k = 0; k < 3; k++) {
+      // k = 0 starts straight up, like the icon.
+      final p = c + Offset.fromDirection(-math.pi / 2 + spin + k * 2 * math.pi / 3, ringRadius);
+      _drawReticleDot(canvas, p, 5, paint);
     }
-    _drawShadowedCircle(canvas, c, 1.8, Paint()..color = Palette.white.withValues(alpha: hit ? 0.95 : 0.5));
+    _drawReticleDot(canvas, c, 2.6, Paint()..color = Palette.white.withValues(alpha: hit ? 1 : 0.6));
+  }
+
+  void _drawReticleDot(Canvas canvas, Offset c, double r, Paint paint) {
+    canvas.drawCircle(
+      c + _reticleShadowOffset,
+      r,
+      Paint()
+        ..color = _reticleShadow
+        ..style = paint.style
+        ..strokeWidth = paint.strokeWidth
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, _reticleShadowBlur),
+    );
+    canvas.drawCircle(c, r, paint);
   }
 
   void _dashed(Canvas canvas, Offset a, Offset b, Paint paint) {
@@ -136,15 +168,14 @@ class ConstellationPainter extends CustomPainter {
     final tp = TextPainter(
       text: TextSpan(
         text: label.text,
-        style: TextStyle(
-          // The live label's number changes as the reticle moves; white
-          // keeps it reading clearly as "still live", apart from the
-          // confirmed (peachRed) segment labels next to it.
-          color: label.live ? Palette.white : _placed,
+        style: const TextStyle(
+          // A canvas TextPainter doesn't inherit the app theme, so the
+          // family is set here explicitly.
+          fontFamily: showdistFontFamily,
+          color: Palette.white,
           fontSize: 12.5,
           fontWeight: FontWeight.w500,
-          fontFeatures: const [...showdistFontFeatures, FontFeature.tabularFigures()],
-          shadows: _labelShadow,
+          fontFeatures: [...showdistFontFeatures, FontFeature.tabularFigures()],
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -156,7 +187,9 @@ class ConstellationPainter extends CustomPainter {
     final rect = Rect.fromCenter(center: Offset(cx, cy), width: w, height: h);
     final rrect = RRect.fromRectAndRadius(rect, Radius.circular(h / 2));
 
-    canvas.drawRRect(rrect, Paint()..color = _shadowColor);
+    canvas.drawRRect(rrect, Paint()..color = labelScrim);
+    // The live label (last point to reticle) keeps a seaGreen hairline, so
+    // it still reads as "still moving" beside the fixed segment labels.
     if (label.live) {
       canvas.drawRRect(
         rrect,
