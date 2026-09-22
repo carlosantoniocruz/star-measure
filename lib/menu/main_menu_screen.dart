@@ -101,16 +101,20 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
               right: 0,
               bottom: 28,
               child: Center(
-                child: SizedBox(
-                  width: 180,
-                  height: 84,
-                  child: CustomPaint(
-                    painter: WordmarkPainter(
-                      paintBackground: false,
-                      topColor: palette.onBase,
-                      bottomColor: palette.emphasis,
-                      maxWidthFraction: 0.95,
-                      maxHeightFraction: 0.85,
+                child: RepaintBoundary(
+                  child: ClipRect(
+                    child: SizedBox(
+                      width: 180,
+                      height: 84,
+                      child: CustomPaint(
+                        painter: WordmarkPainter(
+                          paintBackground: false,
+                          topColor: palette.onBase,
+                          bottomColor: palette.emphasis,
+                          maxWidthFraction: 0.95,
+                          maxHeightFraction: 0.85,
+                        ),
+                      ),
                     ),
                   ),
                 ),
