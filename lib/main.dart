@@ -17,7 +17,8 @@ void main() async {
 }
 
 /// JetBrains Mono is bundled under the OFL-1.1; this makes its license show
-/// up in the standard Flutter "View licenses" page (reached from About).
+/// up on the app's own licenses screen (`lib/licenses_screen.dart`, reached
+/// from About), alongside every package's own registered license.
 void _registerFontLicense() {
   LicenseRegistry.addLicense(() async* {
     yield const LicenseEntryWithLineBreaks(['JetBrains Mono'], _jetBrainsMonoOfl);

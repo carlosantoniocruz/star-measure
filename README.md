@@ -170,8 +170,9 @@ Dart (lib/)
                         storage, sharing, the history screen and detail sheet,
                         and the Settings screen
   level/                the accelerometer-driven bubble level
-  common/               the tick-ring painter, Caption
-  about_screen.dart     app info, per-tool quick start, developer section
+  common/               Caption
+  about_screen.dart     app info: version, developer note, licenses, contact
+  licenses_screen.dart  a themed licenses screen, walking LicenseRegistry directly
 ```
 
 Each camera frame the native side sends one flat `DoubleArray`. Anchor
