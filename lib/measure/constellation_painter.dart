@@ -3,14 +3,38 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../common/diamond.dart';
 import '../theme.dart';
 import 'ar_frame.dart';
 import 'units.dart';
 
+/// Confirmed measurements — placed points, the lines between them, and their
+/// labels — are peachRed ("actions: ... placed points"), fixed regardless of
+/// theme since this sits on the live camera feed, not the app's own chrome.
+const _placed = Palette.peachRed;
+
+/// The reticle and the dashed line reaching for it are seaGreen
+/// ("live/tracking elements: reticle dots, ..."), distinguishing what's still
+/// live from what's already placed.
+const _tracking = Palette.seaGreen;
+
+/// A slight dark shadow under the overlay graphics and text, so they read
+/// against any real-world background.
+const _shadowColor = Color(0xB312354E); // darkTyrianBlue at ~70% alpha
+const _shadowOffset = Offset(0, 1.2);
+const _shadowBlur = 1.4;
+
+Paint _shadowOf(Paint base) => Paint()
+  ..color = _shadowColor
+  ..style = base.style
+  ..strokeWidth = base.strokeWidth
+  ..strokeCap = base.strokeCap
+  ..maskFilter = const MaskFilter.blur(BlurStyle.normal, _shadowBlur);
+
+const _labelShadow = [Shadow(color: _shadowColor, blurRadius: 3, offset: Offset(0, 1))];
+
 /// Draws measurements over the camera feed with as little as possible: small
-/// diamonds for points, hairlines between them, a quiet pill for each
-/// distance, and four tiny diamonds as the aiming reticle.
+/// dots for points, hairlines between them, a quiet pill for each distance,
+/// and four tiny dots as the aiming reticle.
 class ConstellationPainter extends CustomPainter {
   ConstellationPainter({
     required this.frame,
@@ -33,28 +57,33 @@ class ConstellationPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.3
       ..strokeCap = StrokeCap.round
-      ..color = Sky.star.withValues(alpha: 0.9);
+      ..color = _placed;
 
     final labels = <_Label>[];
     for (var i = 1; i < pts.length; i++) {
       final a = pts[i - 1], b = pts[i];
       if (!a.visible || !b.visible) continue;
       final pa = px(a), pb = px(b);
-      canvas.drawLine(pa, pb, line);
+      _drawShadowedLine(canvas, pa, pb, line);
       labels.add(_Label((pa + pb) / 2, formatLength(a.distanceTo(b), units), live: false));
     }
 
     // Dashed line from the last point to wherever the reticle is aiming.
     final reticle = f.reticle;
+    final trackingLine = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.3
+      ..strokeCap = StrokeCap.round
+      ..color = _tracking;
     if (reticle != null && pts.isNotEmpty && pts.last.visible) {
       final a = px(pts.last), b = px(reticle);
-      _dashed(canvas, a, b, line..color = Sky.planet);
+      _dashed(canvas, a, b, trackingLine);
       labels.add(_Label((a + b) / 2, formatLength(pts.last.distanceTo(reticle), units), live: true));
     }
 
-    final marker = Paint()..color = Sky.star;
+    final marker = Paint()..color = _placed;
     for (final p in pts) {
-      if (p.visible) canvas.drawPath(diamondPath(px(p), 6), marker);
+      if (p.visible) _drawShadowedCircle(canvas, px(p), 6, marker);
     }
 
     _reticle(canvas, size.center(Offset.zero), t, hit: reticle != null);
@@ -76,12 +105,12 @@ class ConstellationPainter extends CustomPainter {
     final paint = Paint()
       ..style = hit ? PaintingStyle.fill : PaintingStyle.stroke
       ..strokeWidth = 1.2
-      ..color = hit ? Sky.planet : Sky.star.withValues(alpha: 0.5);
+      ..color = _tracking.withValues(alpha: hit ? 1 : 0.5);
     for (var k = 0; k < 4; k++) {
       final p = c + Offset.fromDirection(t * 0.4 + k * math.pi / 2, ringRadius);
-      canvas.drawPath(diamondPath(p, 4.5), paint);
+      _drawShadowedCircle(canvas, p, 4.5, paint);
     }
-    canvas.drawCircle(c, 1.8, Paint()..color = Sky.star.withValues(alpha: hit ? 0.95 : 0.5));
+    _drawShadowedCircle(canvas, c, 1.8, Paint()..color = Palette.white.withValues(alpha: hit ? 0.95 : 0.5));
   }
 
   void _dashed(Canvas canvas, Offset a, Offset b, Paint paint) {
@@ -89,19 +118,33 @@ class ConstellationPainter extends CustomPainter {
     if (total < 1) return;
     final dir = (b - a) / total;
     for (var d = 0.0; d < total; d += 12) {
-      canvas.drawLine(a + dir * d, a + dir * math.min(d + 6, total), paint);
+      _drawShadowedLine(canvas, a + dir * d, a + dir * math.min(d + 6, total), paint);
     }
+  }
+
+  void _drawShadowedLine(Canvas canvas, Offset a, Offset b, Paint paint) {
+    canvas.drawLine(a + _shadowOffset, b + _shadowOffset, _shadowOf(paint));
+    canvas.drawLine(a, b, paint);
+  }
+
+  void _drawShadowedCircle(Canvas canvas, Offset c, double r, Paint paint) {
+    canvas.drawCircle(c + _shadowOffset, r, _shadowOf(paint));
+    canvas.drawCircle(c, r, paint);
   }
 
   void _drawLabel(Canvas canvas, Size size, _Label label) {
     final tp = TextPainter(
       text: TextSpan(
         text: label.text,
-        style: const TextStyle(
-          color: Sky.star,
+        style: TextStyle(
+          // The live label's number changes as the reticle moves; white
+          // keeps it reading clearly as "still live", apart from the
+          // confirmed (peachRed) segment labels next to it.
+          color: label.live ? Palette.white : _placed,
           fontSize: 12.5,
           fontWeight: FontWeight.w500,
-          fontFeatures: [FontFeature.tabularFigures()],
+          fontFeatures: const [...showdistFontFeatures, FontFeature.tabularFigures()],
+          shadows: _labelShadow,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -113,14 +156,14 @@ class ConstellationPainter extends CustomPainter {
     final rect = Rect.fromCenter(center: Offset(cx, cy), width: w, height: h);
     final rrect = RRect.fromRectAndRadius(rect, Radius.circular(h / 2));
 
-    canvas.drawRRect(rrect, Paint()..color = Sky.space.withValues(alpha: 0.7));
+    canvas.drawRRect(rrect, Paint()..color = _shadowColor);
     if (label.live) {
       canvas.drawRRect(
         rrect,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1
-          ..color = Sky.planet.withValues(alpha: 0.8),
+          ..color = _tracking.withValues(alpha: 0.8),
       );
     }
     tp.paint(canvas, rect.topLeft + const Offset(8, 4));

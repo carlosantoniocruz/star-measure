@@ -1,4 +1,4 @@
-package com.example.ar_measure
+package com.showconfigs.showdist
 
 import android.opengl.GLES11Ext
 import android.opengl.GLES20

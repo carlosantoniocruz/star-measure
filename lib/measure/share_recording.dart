@@ -8,28 +8,14 @@ import 'ar_channel.dart';
 import 'recording.dart';
 import 'units.dart';
 
-enum ExportFormat {
-  csv('csv', 'text/csv'),
-  json('json', 'application/json');
-
-  const ExportFormat(this.extension, this.mimeType);
-
-  final String extension, mimeType;
-  String get label => extension.toUpperCase();
-}
-
 /// Everything you can do with a recording from a share menu.
 enum ShareChoice {
-  csv('Share CSV', ExportFormat.csv),
-  json('Share JSON', ExportFormat.json),
-  copyText('Copy text', null);
+  shareText('Share .txt'),
+  copyText('Copy text');
 
-  const ShareChoice(this.label, this.format);
+  const ShareChoice(this.label);
 
   final String label;
-
-  /// The file format to share, or null for choices that don't produce a file.
-  final ExportFormat? format;
 }
 
 /// Puts the plain-text summary (total and every segment) on the clipboard.
@@ -44,13 +30,13 @@ Future<void> copyRecordingText(Recording r, UnitSystem units) =>
 @visibleForTesting
 String exportDirPath(String cacheDir) => '$cacheDir/exports';
 
-/// Plain-text version of a recording, for apps that show only the message text
-/// and drop the attached file (messaging apps, notes).
+/// Plain-text version of a recording: the total and every segment. Used both
+/// as the shared .txt file's contents and as the copy-to-clipboard text.
 String recordingSummary(Recording r, UnitSystem units, {int maxSegments = 20}) {
   final segments = r.segments;
   final buf = StringBuffer()
-    ..writeln('Star Measure: ${formatLength(r.total, units)}')
-    ..writeln('${r.points.length} points, ${segments.length} segments · ${formatStamp(r.createdAt)}');
+    ..writeln('Showdist: ${formatLength(r.total, units)}')
+    ..writeln('${r.points.length} points, ${segments.length} segments');
   final shown = segments.length < maxSegments ? segments.length : maxSegments;
   for (var i = 0; i < shown; i++) {
     buf.writeln('${i + 1}. ${formatLength(segments[i], units)}');
@@ -59,9 +45,9 @@ String recordingSummary(Recording r, UnitSystem units, {int maxSegments = 20}) {
   return buf.toString().trimRight();
 }
 
-/// Opens the Android share sheet with the recording attached as a file and its
-/// segment lengths as text. Throws if the file can't be written or shared.
-Future<void> shareRecording(Recording r, UnitSystem units, ExportFormat format) async {
+/// Opens the Android share sheet — the standard system picker of installed
+/// apps — with the recording as a .txt file attachment.
+Future<void> shareRecording(Recording r, UnitSystem units) async {
   final dir = Directory(exportDirPath((await ArChannel.dirs()).cache));
   // Drop earlier exports; share_plus has already copied whatever it needed.
   if (await dir.exists()) await dir.delete(recursive: true);
@@ -69,18 +55,14 @@ Future<void> shareRecording(Recording r, UnitSystem units, ExportFormat format) 
 
   final t = r.createdAt;
   String two(int n) => n.toString().padLeft(2, '0');
-  final name =
-      'star-measure-${t.year}${two(t.month)}${two(t.day)}-${two(t.hour)}${two(t.minute)}${two(t.second)}.${format.extension}';
+  final name = 'showdist-${t.year}${two(t.month)}${two(t.day)}-${two(t.hour)}${two(t.minute)}${two(t.second)}.txt';
   final file = File('${dir.path}/$name');
-  await file.writeAsString(
-    format == ExportFormat.csv ? r.toCsv(units) : r.toExportJson(units),
-    flush: true,
-  );
+  await file.writeAsString(recordingSummary(r, units), flush: true);
 
   await SharePlus.instance.share(
     ShareParams(
-      files: [XFile(file.path, mimeType: format.mimeType, name: name)],
-      subject: 'Star Measure: ${formatLength(r.total, units)}',
+      files: [XFile(file.path, mimeType: 'text/plain', name: name)],
+      subject: 'Showdist: ${formatLength(r.total, units)}',
       text: recordingSummary(r, units),
     ),
   );

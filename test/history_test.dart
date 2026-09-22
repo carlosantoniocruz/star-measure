@@ -1,8 +1,8 @@
-import 'package:ar_measure/measure/history_screen.dart';
-import 'package:ar_measure/measure/recording.dart';
-import 'package:ar_measure/measure/recording_store.dart';
-import 'package:ar_measure/measure/units.dart';
-import 'package:ar_measure/theme.dart';
+import 'package:showdist/measure/history_screen.dart';
+import 'package:showdist/measure/recording.dart';
+import 'package:showdist/measure/recording_store.dart';
+import 'package:showdist/measure/units.dart';
+import 'package:showdist/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +17,7 @@ Recording rec(String id, double metres, int minute) => Recording(
 Future<RecordingStore> pumpHistory(WidgetTester tester, {List<Recording>? items}) async {
   final store = RecordingStore.inMemory(items ?? [rec('c', 3, 30), rec('b', 2, 20), rec('a', 1, 10)]);
   await tester.pumpWidget(MaterialApp(
-    theme: Sky.theme(),
+    theme: buildTheme(),
     home: Builder(
       builder: (context) => Scaffold(
         body: Center(
@@ -42,7 +42,9 @@ void main() {
     expect(find.text('HISTORY'), findsOneWidget);
     final y = [for (final t in ['3.00 m', '2.00 m', '1.00 m']) tester.getTopLeft(find.text(t)).dy];
     expect(y, orderedEquals([...y]..sort()), reason: 'newest at the top, scrolling down goes back in time');
-    expect(find.text('2 points · Sep 21, 12:30'), findsOneWidget);
+    // All three sample recordings have 2 points; the date used to make each
+    // row's subtitle unique, but dates aren't shown anymore.
+    expect(find.text('2 points'), findsNWidgets(3));
   });
 
   testWidgets('shows an empty state', (tester) async {
@@ -175,18 +177,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(copied, hasLength(1));
-    expect(copied.single, startsWith('Star Measure: 17.00 m'));
+    expect(copied.single, startsWith('Showdist: 17.00 m'));
     expect(copied.single, contains('1. 5.00 m'));
     expect(copied.single, contains('2. 12.00 m'));
     expect(find.text('Copied to clipboard'), findsOneWidget);
   });
 
-  testWidgets('the row share menu offers CSV, JSON and Copy text', (tester) async {
+  testWidgets('the row share menu offers Share .txt and Copy text', (tester) async {
     await pumpHistory(tester, items: [rec('a', 1, 10)]);
     await tester.tap(find.byTooltip('Share or copy'));
     await tester.pumpAndSettle();
-    expect(find.text('Share CSV'), findsOneWidget);
-    expect(find.text('Share JSON'), findsOneWidget);
+    expect(find.text('Share .txt'), findsOneWidget);
     expect(find.text('Copy text'), findsOneWidget);
   });
 }

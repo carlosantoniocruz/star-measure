@@ -1,34 +1,41 @@
-# Star Measure
+# Showdist
 
-<p align="center"><img src="docs/logo.png" width="160" alt="Star Measure logo: a ring of amber diamond petals around a green planet"></p>
+<p align="center"><img src="docs/logo.png" width="160" alt="Showdist logo"></p>
 
 An augmented-reality tape measure for Android, built with Flutter and ARCore.
 Point the camera at a surface, tap to drop points, and read off the distances.
-Measurements can be saved on the device, browsed in a history, and exported as
-CSV or JSON through the Android share sheet, or copied as text.
+Measurements can be saved on the device, browsed in a history, and shared as
+a plain-text file through the Android share sheet, or copied as text.
 
-The look is a minimal night sky: a ring of diamonds you connect to get in, a
-flat logo, hairline measuring lines, and small diamonds for points. It is
-inspired by the connect-the-dots easter egg in Android 17. It is an
+The look is one fixed dark-navy theme, drawn from Sanzo Wada's *A Dictionary
+of Color Combinations* — no light/dark switching, no system-theme following:
+hairline measuring lines in peachRed, a seaGreen aiming reticle, small dots
+for points, and static ruler tick marks along the bottom edge. It is an
 independent project and is not affiliated with Google or Android.
 
 ## Using it
 
-**Getting in.** Drag a finger through the twelve diamonds to connect them. The
-logo appears; hold it until the ring fills to launch. **Skip** in the corner
-goes straight to measuring.
+The app opens straight to a **main menu**: the SHOWDIST wordmark at the top,
+then two tools — **Measure** and **Leveler** — as large bordered cards,
+Measure the more prominent of the two. Static ruler tick marks run along the
+bottom edge. About and Settings are one tap away, top-left and top-right.
 
-**Measuring.**
+The AR session doesn't start until you actually tap Measure — opening the
+main menu never touches the camera.
+
+**Measuring.** Like every screen, this one uses the app's one fixed theme.
 
 1. Allow camera access. If the phone lacks Google Play Services for AR, the app
    offers to install it.
-2. Move the phone slowly so ARCore can find surfaces. The four diamonds around
-   the screen centre turn green when they are on a surface.
-3. **Tap** the large diamond button to place a point. Each new point adds a
+2. Move the phone slowly so ARCore can find surfaces. The four dots around
+   the screen centre light up when they are on a surface.
+3. **Tap** the large button to place a point. Each new point adds a
    segment with its length, and a dashed line shows the live distance from the
    last point to the reticle.
-4. **Hold** the button once you have two or more points to stop and save the
-   measurement. The screen clears, ready for the next one.
+4. **Hold anywhere on screen** once you have two or more points to stop and
+   save the measurement — not just the button, so you don't have to aim for
+   it. The button's ring fills as you hold, wherever your thumb actually is.
+   The screen clears, ready for the next one.
 
 The bottom row, left to right:
 
@@ -36,12 +43,33 @@ The bottom row, left to right:
 | --- | --- |
 | History | Open the history of saved measurements (count badge) |
 | Undo | Remove the last point |
-| Diamond button, tap | Place a point at the reticle |
-| Diamond button, hold (0.8 s) | Save the measurement and start fresh |
+| Button, tap | Place a point at the reticle |
+| Hold anywhere on screen (0.8 s) | Save the measurement and start fresh |
 | Close | Clear all points without saving |
 | M / FT | Metric or imperial display |
 
-Up to 24 points per measurement. Portrait only.
+Up to 24 points per measurement. Portrait only. The system back gesture/button
+returns to the main menu.
+
+**Level.** A bubble level for things mounted on a wall — a shelf, a picture
+frame, a TV bracket — using the accelerometer. Hold the phone upright and flat
+against the wall (or against whatever you're checking). The dot centres
+in the ring and the ring lights up when you're within 0.3° of plumb; the
+readout below is the tilt in degrees.
+
+## Settings
+
+Reached from the gear icon on the main menu.
+
+- **Units** — Imperial (default: feet and inches, e.g. `4′ 7 1/2″`) or
+  Metric, saved on device and restored on the next launch. The same setting
+  drives the in-AR M/FT toggle.
+
+**About**, also reached from the settings screen, shows the app name,
+version, a quick-start guide for each tool, a developer section, a licenses
+page (Flutter, ARCore, and the bundled JetBrains Mono font), and a contact
+email (selectable, to copy). It's also reachable directly from the main
+menu's info icon, top-left.
 
 ## Saving and exporting
 
@@ -52,8 +80,8 @@ renamed to `recordings.json.corrupt` rather than overwritten.
 ### History
 
 The history button opens every saved measurement, newest first. Scroll down to
-go further back; each row shows the total, the point count, the time, and a
-small sketch of its shape. The back arrow returns to measuring.
+go further back; each row shows the total, the point count, and a small
+sketch of its shape — no date. The back arrow returns to measuring.
 
 - **Tap** a row to see every segment and share or copy it.
 - **Long-press** a row, or choose **Select** from the menu, to select several.
@@ -63,49 +91,33 @@ small sketch of its shape. The back arrow returns to measuring.
 
 ### Sharing and copying
 
-Each measurement has three actions, in the save sheet, the detail sheet, and the
+Each measurement has two actions, in the save sheet, the detail sheet, and the
 share menu on each history row:
 
-- **Share CSV** and **Share JSON** write a file and hand it to the Android share
-  sheet, so it can go to Drive, email, chat, or any other app that accepts files.
-  The share also carries the total and every segment length as plain text, for
-  apps that ignore attachments.
-- **Copy text** puts that plain-text summary on the clipboard:
+- **Share .txt** writes a plain-text file and hands it to the Android share
+  sheet — the standard system picker of whatever's installed (Drive, email,
+  chat, notes, anything that accepts a file). The share also carries the same
+  text directly, for apps that show only the message and drop the attachment.
+- **Copy text** puts that same plain-text summary on the clipboard.
 
-  ```
-  Star Measure: 17.00 m
-  3 points, 2 segments · Sep 21, 16:40
-  1. 5.00 m
-  2. 12.00 m
-  ```
-
-**CSV** has one row per segment and a final total row:
+Both produce the same text — the total and every segment, no date or
+timestamp:
 
 ```
-recorded_at,segment,from_point,to_point,length_m,length_display,x1_m,y1_m,z1_m,x2_m,y2_m,z2_m
+Showdist: 17.00 m
+3 points, 2 segments
+1. 5.00 m
+2. 12.00 m
 ```
 
-`length_display` is formatted in whichever unit system is selected when you
-share. `length_m` is always metres.
+Recordings longer than 20 segments are truncated in the text, with a note
+pointing at the attached file for the rest.
 
-**JSON** carries the same data as structured fields:
-
-```json
-{
-  "app": "Star Measure",
-  "recorded_at": "2026-09-21T16:40:05.000",
-  "unit_system": "metric",
-  "total_m": 17.0,
-  "total_display": "17.00 m",
-  "coordinates": "ARCore world space, metres; origin is where the AR session started",
-  "points":   [{ "index": 1, "x": 0.0, "y": 0.0, "z": 0.0 }],
-  "segments": [{ "index": 1, "from": 1, "to": 2, "length_m": 5.0, "length_display": "5.00 m" }]
-}
-```
-
-Coordinates are in ARCore's world space. They describe the shape and the
-distances accurately relative to each other, but the origin is wherever the AR
-session started, so they are not a position in the room or on a map.
+Measurements are still ordered newest-first in the app and recorded with an
+internal timestamp for storage, but that timestamp isn't shown anywhere or
+included in what's shared — only the shared `.txt` file's name carries one
+(e.g. `showdist-20260921-164005.txt`), so repeated exports don't overwrite
+each other.
 
 ## Requirements
 
@@ -135,8 +147,8 @@ flutter test
 ```
 
 The launcher icon (adaptive, with a themed monochrome layer, plus legacy icons
-and `docs/logo.png`) is rendered from the same painter as the in-app logo.
-After changing `lib/intro/logo_painter.dart`, regenerate it with:
+and `docs/logo.png`) is rendered from the same painter as the About screen's
+badge. After changing `lib/common/tick_ring_painter.dart`, regenerate it with:
 
 ```sh
 flutter test tool/generate_icons.dart
@@ -148,7 +160,7 @@ ARCore runs natively in Kotlin. Flutter draws every pixel of UI. They talk over
 one method channel and one event channel.
 
 ```
-Kotlin (android/app/src/main/kotlin/com/example/ar_measure/)
+Kotlin (android/app/src/main/kotlin/com/showconfigs/showdist/)
   ArMeasureController   owns the ARCore Session, permissions and install flow,
                         and the channels ar_measure/ar and ar_measure/frames
   ArMeasureView         GLSurfaceView platform view: draws the camera feed,
@@ -156,10 +168,15 @@ Kotlin (android/app/src/main/kotlin/com/example/ar_measure/)
   BackgroundRenderer    camera image as a full-screen OpenGL quad
 
 Dart (lib/)
-  intro/                connect-the-diamonds gate, starfield, logo
+  menu/                 the main menu (Measure / Leveler tool cards, About /
+                        Settings icons, the static ruler ticks)
   measure/              AR screen, constellation painter, units, recordings,
-                        storage, sharing, the history screen and detail sheet
-tool/generate_icons.dart  renders the launcher icon from the in-app logo
+                        storage, sharing, the history screen and detail sheet,
+                        and the Settings screen
+  level/                the accelerometer-driven bubble level
+  common/               the tick-ring painter, Caption
+  about_screen.dart     app info, per-tool quick start, developer section
+tool/generate_icons.dart  renders the launcher icon from the in-app tick ring
 ```
 
 Each camera frame the native side sends one flat `DoubleArray`. Anchor
@@ -186,12 +203,12 @@ draw above it.
 
 ## Testing
 
-`flutter test` runs 59 tests:
+`flutter test` runs 55 tests:
 
 - unit formatting (metric and imperial)
 - decoding the native frame payload, including truncated payloads
-- segment and total maths, CSV and JSON export, CSV escaping, the plain-text
-  summary, and the folder exports are written to
+- segment and total maths, the plain-text summary (and its truncation past
+  20 segments), and the folder exports are written to
 - the recording store: persistence, ordering, removing some or all, change
   notifications, and a corrupt save file
 - the history thumbnails (how a 3D measurement is flattened)
@@ -200,11 +217,12 @@ draw above it.
   leaving selection first, opening a row, and Copy text reaching the clipboard
 - the measuring overlay: a distance label is drawn only when its segment's
   midpoint is on-screen, so no labels are stranded on the edges
-- the intro: connecting all twelve diamonds, hold to launch, an early release
-  that must not launch, and skip
+- the main menu: both tool cards are present, Leveler opens the bubble
+  level, the gear opens Settings
 
-The native ARCore path (session start, hit testing, anchors, projection) has no
-automated tests, because it needs a real camera. Test it on a device.
+The native ARCore path (session start, hit testing, anchors, projection) and
+the Level screen's accelerometer reading have no automated tests, because
+both need real hardware. Test them on a device.
 
 ## Known limitations
 
@@ -222,15 +240,71 @@ automated tests, because it needs a real camera. Test it on a device.
   `compileSdk` 37, which the Gradle and AGP setup here could not resolve.
 - `share_plus` is pinned to `^11.0.0`. Version 13 moves to `jni` native-asset
   build hooks, which is a heavier toolchain than a share sheet needs.
+- `shared_preferences` stores the Settings screen's units choice.
+- `sensors_plus` reads the accelerometer for the Level screen.
 
 ## Design
 
-Colours live in `lib/theme.dart`: near-black space, star white, an exoplanet
-green for anything active, and a warm amber for the logo petals. The diamond
-shape (`lib/common/diamond.dart`) is used for the intro ring, measuring points,
-the reticle, and the main button. Press coverage of the Android 17 easter egg
-describes its mechanics but not its exact colours, so the palette is an original
-interpretation rather than a copy.
+Showdist uses one fixed theme, app-wide — no light/dark switching, no system
+theme following. Colours live in `lib/theme.dart` as `Palette`, eight named
+constants drawn from Sanzo Wada's *A Dictionary of Color Combinations*:
+
+| Token | Hex | Role |
+| --- | --- | --- |
+| `darkTyrianBlue` | `#12354E` | Main background — landing, settings, licences |
+| `olympicBlue` | `#5A82B3` | Secondary accents — selection/toggle state |
+| `lightMauve` | `#9A72AA` | The wordmark and large headings |
+| `darkCitrine` | `#8B835B` | Small decorative details — the main menu's ruler ticks |
+| `peachRed` | `#F15A30` | Actions — the capture button, placed measurement points |
+| `seaGreen` | `#00B49B` | Live/tracking elements — reticle dots, the leveler liquid |
+| `warmGray` | `#A1A39A` | The leveler's own background, and muted/secondary text |
+| `white` | `#FFFFFF` | Body text, live numbers, the reticle's centre dot |
+
+Every screen is built from these eight colours only. Every text pairing the
+app actually uses clears WCAG's 4.5:1 for normal text: white on
+`darkTyrianBlue` is 12.8:1, `warmGray` on `darkTyrianBlue` is 5.0:1, and
+`darkTyrianBlue` on `warmGray` (the leveler's own readout background) is also
+5.0:1. The saturated accents (`olympicBlue`, `lightMauve`, `darkCitrine`,
+`peachRed`) sit at 3.2-3.8:1 against `darkTyrianBlue` — enough for icons,
+strokes, and large text, which is all they're ever used for; small running
+text always stays white or `warmGray`. `seaGreen` is strong enough for small
+text too, at 4.9:1.
+
+- **Camera overlay** (`ConstellationPainter`): confirmed points, the lines
+  between them, and their labels are peachRed. The reticle's four dots and
+  the dashed line reaching for it are seaGreen, distinguishing what's still
+  live from what's already placed; the reticle's centre dot and the live
+  label (the one that changes as the phone moves) are white. A drop shadow
+  under the overlay graphics uses `darkTyrianBlue`, not plain black, so it
+  still reads as part of the app's own palette against any real-world
+  background.
+- **The leveler**: the vial behind the bubble is `warmGray` — the palette's
+  "leveler background" — and the bubble itself is seaGreen once plumb
+  ("leveler liquid"), white otherwise.
+- **Selection state** (History's picked rows, the Settings radio buttons)
+  uses `olympicBlue`. Small running text never takes a colour accent — the
+  unit toggle's on/off state and the history badge count are told apart by
+  weight and opacity, not colour, since none of the accents clear 4.5:1 at
+  small sizes.
+
+Text is set in **JetBrains Mono** (bundled under `assets/fonts/`, OFL-1.1
+licensed — see `assets/fonts/JetBrainsMono/OFL.txt`), the only font in the
+app. Its zero is dotted by default; the app turns on the `zero` OpenType
+feature (`FontFeature.slashedZero()`) everywhere so 0/O and 1/l/I stay
+unmistakable.
+
+Small filled circles — not diamonds — mark measuring points, the reticle, the
+main button, and the level's bubble. The **app icon** (and the About screen's
+badge, `lib/common/tick_ring_painter.dart`) has no lettering at all:
+a `darkTyrianBlue` field, a `peachRed` ring, and `darkTyrianBlue` tick marks
+notched across it at regular intervals, like a gauge dial.
+The **SHOWDIST wordmark** — one word, all caps, `lightMauve` — sits at the
+top of the main menu. Below it, **Measure** and **Leveler** are large
+bordered cards (`peachRed` and `olympicBlue` respectively), Measure the
+larger and more strongly tinted of the two, each filling its share of the
+remaining space rather than leaving it empty. Static ruler tick marks —
+`darkCitrine`, no animation — run along the very bottom edge, pointing
+upward, like a tape measure's edge.
 
 ## License
 

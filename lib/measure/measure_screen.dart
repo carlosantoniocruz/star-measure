@@ -9,7 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../common/caption.dart';
-import '../common/diamond.dart';
+import '../settings.dart';
 import '../theme.dart';
 import 'ar_channel.dart';
 import 'ar_frame.dart';
@@ -21,7 +21,9 @@ import 'recording_store.dart';
 import 'units.dart';
 
 class MeasureScreen extends StatefulWidget {
-  const MeasureScreen({super.key});
+  const MeasureScreen({super.key, required this.settings});
+
+  final AppSettings settings;
 
   @override
   State<MeasureScreen> createState() => _MeasureScreenState();
@@ -41,16 +43,27 @@ class _Problem {
 }
 
 class _MeasureScreenState extends State<MeasureScreen>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   final _frame = ValueNotifier<ArFrame>(ArFrame.empty);
   final _time = ValueNotifier<double>(0);
   late final Ticker _ticker = createTicker((d) => _time.value = d.inMicroseconds / 1e6);
+
+  /// Hold anywhere on screen to save: shared by the full-screen gesture
+  /// detector and the button's own charge-ring display.
+  late final AnimationController _charge = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 800),
+  )..addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _record();
+        _charge.value = 0;
+      }
+    });
 
   StreamSubscription<ArFrame>? _sub;
   RecordingStore? _store;
   _Problem? _problem;
   bool _running = false;
-  UnitSystem _units = UnitSystem.metric;
 
   @override
   void initState() {
@@ -69,6 +82,7 @@ class _MeasureScreenState extends State<MeasureScreen>
     _sub?.cancel();
     ArChannel.stop();
     _ticker.dispose();
+    _charge.dispose();
     _frame.dispose();
     _time.dispose();
     _store?.dispose();
@@ -115,7 +129,7 @@ class _MeasureScreenState extends State<MeasureScreen>
       case 'declined':
         _fail(_Problem(
           'AR services required',
-          'Star Measure needs Google Play Services for AR to see surfaces.',
+          'Showdist needs Google Play Services for AR to see surfaces.',
           action: 'Try again',
           onAction: _begin,
         ));
@@ -150,7 +164,22 @@ class _MeasureScreenState extends State<MeasureScreen>
     ArChannel.addPoint();
   }
 
-  /// Long-press: stop measuring, save what's on screen, and start fresh.
+  /// Start the save charge — from the button, or from anywhere else on
+  /// screen. Ignored with fewer than two points, same as before.
+  void _chargeStart() {
+    if (_frame.value.points.length < 2) return;
+    if (_charge.status == AnimationStatus.forward) return;
+    HapticFeedback.selectionClick();
+    _charge.forward(from: 0);
+  }
+
+  void _chargeCancel() {
+    if (_charge.status != AnimationStatus.completed) {
+      _charge.animateBack(0, duration: const Duration(milliseconds: 200));
+    }
+  }
+
+  /// Charge completed: stop measuring, save what's on screen, and start fresh.
   Future<void> _record() async {
     final points = _frame.value.points;
     if (points.length < 2) return;
@@ -168,16 +197,16 @@ class _MeasureScreenState extends State<MeasureScreen>
   Future<void> _showSaved(Recording r) {
     return showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Sky.space,
+      backgroundColor: Palette.darkTyrianBlue,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (sheetContext) => RecordingSheet(
         title: 'SAVED',
         recording: r,
-        units: _units,
+        units: widget.settings.units,
         onChoice: (choice) {
           Navigator.pop(sheetContext);
-          performShareChoice(context, r, _units, choice);
+          performShareChoice(sheetContext, r, widget.settings.units, choice);
         },
       ),
     );
@@ -187,7 +216,7 @@ class _MeasureScreenState extends State<MeasureScreen>
     final store = _store;
     if (store == null) return Future.value();
     return Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => HistoryScreen(store: store, units: _units)),
+      MaterialPageRoute<void>(builder: (_) => HistoryScreen(store: store, units: widget.settings.units)),
     );
   }
 
@@ -195,119 +224,139 @@ class _MeasureScreenState extends State<MeasureScreen>
   Widget build(BuildContext context) {
     final problem = _problem;
     return Scaffold(
-      backgroundColor: Sky.space,
+      backgroundColor: Palette.darkTyrianBlue,
       body: problem != null
           ? _ProblemView(problem: problem)
           : _running
               ? _buildAr()
-              : const Center(child: Caption('WAKING THE CAMERA')),
+              : const Center(child: Caption('WAKING THE CAMERA', color: Palette.warmGray)),
     );
   }
 
   Widget _buildAr() {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        const _ArView(),
-        const IgnorePointer(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0x99000000), Color(0x00000000), Color(0x00000000), Color(0xAA000000)],
-                stops: [0, 0.18, 0.72, 1],
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onLongPressStart: (_) => _chargeStart(),
+      onLongPressEnd: (_) => _chargeCancel(),
+      onLongPressCancel: _chargeCancel,
+      child: ListenableBuilder(
+        listenable: widget.settings,
+        builder: (context, _) {
+          final units = widget.settings.units;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              const _ArView(),
+              const IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    // darkTyrianBlue, faded in from transparent — a scrim so
+                    // the white/peachRed/seaGreen overlay reads against any
+                    // real-world background, without resorting to plain black.
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0x9912354E), Color(0x0012354E), Color(0x0012354E), Color(0xAA12354E)],
+                      stops: [0, 0.18, 0.72, 1],
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
-        IgnorePointer(
-          child: CustomPaint(
-            painter: ConstellationPainter(frame: _frame, time: _time, units: _units),
-          ),
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
-            child: Column(
-              children: [
-                ValueListenableBuilder<ArFrame>(
-                  valueListenable: _frame,
-                  builder: (context, f, _) => Column(
+              IgnorePointer(
+                child: CustomPaint(
+                  painter: ConstellationPainter(frame: _frame, time: _time, units: units),
+                ),
+              ),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
+                  child: Column(
                     children: [
-                      _Hint(text: _hint(f)),
-                      if (f.points.length >= 2) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          formatLength(f.totalLength, _units),
-                          style: const TextStyle(
-                            color: Sky.star,
-                            fontSize: 34,
-                            fontWeight: FontWeight.w200,
-                            fontFeatures: [FontFeature.tabularFigures()],
-                          ),
+                      ValueListenableBuilder<ArFrame>(
+                        valueListenable: _frame,
+                        builder: (context, f, _) => Column(
+                          children: [
+                            _Hint(text: _hint(f), color: Palette.white),
+                            if (f.points.length >= 2) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                formatLength(f.totalLength, units),
+                                style: TextStyle(
+                                  color: Palette.white,
+                                  fontSize: 34,
+                                  fontWeight: FontWeight.w200,
+                                  fontFeatures: [...showdistFontFeatures, const FontFeature.tabularFigures()],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                      ],
+                      ),
+                      const Spacer(),
+                      ValueListenableBuilder<ArFrame>(
+                        valueListenable: _frame,
+                        builder: (context, f, _) {
+                          final hasPoints = f.points.isNotEmpty;
+                          // Two items each side of the main button keeps it centred.
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    ListenableBuilder(
+                                      listenable: _store ?? _time,
+                                      builder: (context, _) => _IconAction(
+                                        icon: Icons.history_rounded,
+                                        tooltip: 'History',
+                                        badge: _store?.items.length ?? 0,
+                                        onTap: _store == null ? null : _showHistory,
+                                      ),
+                                    ),
+                                    _IconAction(
+                                      icon: Icons.undo_rounded,
+                                      tooltip: 'Undo last point',
+                                      onTap: hasPoints ? ArChannel.undo : null,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              AnimatedBuilder(
+                                animation: _charge,
+                                builder: (context, _) => _AddButton(
+                                  enabled: f.reticle != null,
+                                  charge: _charge.value,
+                                  onAdd: _addPoint,
+                                ),
+                              ),
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    _IconAction(
+                                      icon: Icons.close_rounded,
+                                      tooltip: 'Clear all points',
+                                      onTap: hasPoints ? ArChannel.clear : null,
+                                    ),
+                                    _UnitToggle(
+                                      value: units,
+                                      onChanged: widget.settings.setUnits,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
-                const Spacer(),
-                ValueListenableBuilder<ArFrame>(
-                  valueListenable: _frame,
-                  builder: (context, f, _) {
-                    final hasPoints = f.points.isNotEmpty;
-                    // Two items each side of the main button keeps it centred.
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              ListenableBuilder(
-                                listenable: _store ?? _time,
-                                builder: (context, _) => _IconAction(
-                                  icon: Icons.history_rounded,
-                                  tooltip: 'History',
-                                  badge: _store?.items.length ?? 0,
-                                  onTap: _store == null ? null : _showHistory,
-                                ),
-                              ),
-                              _IconAction(
-                                icon: Icons.undo_rounded,
-                                tooltip: 'Undo last point',
-                                onTap: hasPoints ? ArChannel.undo : null,
-                              ),
-                            ],
-                          ),
-                        ),
-                        _AddButton(
-                          enabled: f.reticle != null,
-                          canRecord: f.points.length >= 2,
-                          onAdd: _addPoint,
-                          onRecord: _record,
-                        ),
-                        Expanded(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _IconAction(
-                                icon: Icons.close_rounded,
-                                tooltip: 'Clear all points',
-                                onTap: hasPoints ? ArChannel.clear : null,
-                              ),
-                              _UnitToggle(value: _units, onChanged: (u) => setState(() => _units = u)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -328,7 +377,7 @@ class _MeasureScreenState extends State<MeasureScreen>
         if (f.reticle == null && f.points.length < 2) return 'Aim at a surface';
         if (f.points.isEmpty) return 'Tap to place a point';
         if (f.points.length == 1) return 'Place the next point';
-        return 'Tap to add · hold to save';
+        return 'Tap to add · hold anywhere to save';
     }
   }
 }
@@ -364,9 +413,10 @@ class _ArView extends StatelessWidget {
 
 /// One quiet line of guidance; no chip, no border.
 class _Hint extends StatelessWidget {
-  const _Hint({required this.text});
+  const _Hint({required this.text, required this.color});
 
   final String text;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -376,10 +426,10 @@ class _Hint extends StatelessWidget {
         text,
         key: ValueKey(text),
         style: TextStyle(
-          color: Sky.star.withValues(alpha: 0.85),
+          color: color.withValues(alpha: 0.85),
           fontSize: 13,
           letterSpacing: 0.3,
-          shadows: const [Shadow(blurRadius: 6, color: Color(0xAA000000))],
+          shadows: const [Shadow(blurRadius: 6, color: Color(0xAA12354E))], // darkTyrianBlue
         ),
       ),
     );
@@ -404,7 +454,9 @@ class _UnitToggle extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: on ? Sky.planet : Sky.star.withValues(alpha: 0.5),
+              // Weight and opacity carry the on/off state, not colour — small
+              // text stays white so it always clears contrast on the camera feed.
+              color: on ? Palette.white : Palette.white.withValues(alpha: 0.5),
               fontSize: 12,
               fontWeight: on ? FontWeight.w700 : FontWeight.w500,
               letterSpacing: 1.5,
@@ -423,7 +475,12 @@ class _UnitToggle extends StatelessWidget {
 
 /// Bare icon, no container. Optional count badge.
 class _IconAction extends StatelessWidget {
-  const _IconAction({required this.icon, required this.tooltip, required this.onTap, this.badge = 0});
+  const _IconAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.badge = 0,
+  });
 
   final IconData icon;
   final String tooltip;
@@ -444,14 +501,14 @@ class _IconAction extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Icon(icon, color: Sky.star.withValues(alpha: enabled ? 0.9 : 0.3), size: 24),
+              Icon(icon, color: Palette.white.withValues(alpha: enabled ? 0.9 : 0.3), size: 24),
               if (badge > 0)
                 Positioned(
                   right: 4,
                   top: 6,
                   child: Text(
                     '$badge',
-                    style: const TextStyle(color: Sky.planet, fontSize: 11, fontWeight: FontWeight.w700),
+                    style: const TextStyle(color: Palette.white, fontSize: 11, fontWeight: FontWeight.w700),
                   ),
                 ),
             ],
@@ -462,70 +519,28 @@ class _IconAction extends StatelessWidget {
   }
 }
 
-/// A thin ring around a diamond. Tap adds a point (lit green when the reticle
-/// is on a surface). Once two points exist, holding fills the ring and saves.
-class _AddButton extends StatefulWidget {
-  const _AddButton({
-    required this.enabled,
-    required this.canRecord,
-    required this.onAdd,
-    required this.onRecord,
-  });
+/// A thin ring around a dot. Tap adds a point (lit when the reticle is on
+/// a surface). [charge] (0 to 1, driven by holding anywhere on screen) fills
+/// the ring; reaching 1 saves the measurement.
+class _AddButton extends StatelessWidget {
+  const _AddButton({required this.enabled, required this.charge, required this.onAdd});
 
-  final bool enabled, canRecord;
-  final VoidCallback onAdd, onRecord;
-
-  @override
-  State<_AddButton> createState() => _AddButtonState();
-}
-
-class _AddButtonState extends State<_AddButton> with SingleTickerProviderStateMixin {
-  late final AnimationController _charge = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 800),
-  )..addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        widget.onRecord();
-        _charge.value = 0;
-      }
-    });
-
-  @override
-  void dispose() {
-    _charge.dispose();
-    super.dispose();
-  }
-
-  void _cancel() {
-    if (_charge.status != AnimationStatus.completed) {
-      _charge.animateBack(0, duration: const Duration(milliseconds: 200));
-    }
-  }
+  final bool enabled;
+  final double charge;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
-    final lit = widget.enabled;
     return Semantics(
       button: true,
-      enabled: lit,
-      label: 'Place point. Hold to save measurement',
+      enabled: enabled,
+      label: 'Place point. Hold anywhere on screen to save measurement',
       child: GestureDetector(
-        onTap: lit ? widget.onAdd : null,
-        onLongPressStart: widget.canRecord
-            ? (_) {
-                HapticFeedback.selectionClick();
-                _charge.forward(from: 0);
-              }
-            : null,
-        onLongPressEnd: (_) => _cancel(),
-        onLongPressCancel: _cancel,
+        onTap: enabled ? onAdd : null,
         behavior: HitTestBehavior.opaque,
-        child: AnimatedBuilder(
-          animation: _charge,
-          builder: (context, _) => CustomPaint(
-            size: const Size(76, 76),
-            painter: _AddButtonPainter(lit: lit, charge: _charge.value),
-          ),
+        child: CustomPaint(
+          size: const Size(96, 96),
+          painter: _AddButtonPainter(lit: enabled, charge: charge),
         ),
       ),
     );
@@ -542,7 +557,9 @@ class _AddButtonPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final radius = size.width / 2 - 2;
-    final accent = lit ? Sky.planet : Sky.star.withValues(alpha: 0.35);
+    // peachRed — "actions: the capture button" — once the reticle is on a
+    // surface; a dim white ring otherwise.
+    final accent = lit ? Palette.peachRed : Palette.white.withValues(alpha: 0.35);
 
     canvas.drawCircle(
       c,
@@ -562,10 +579,10 @@ class _AddButtonPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeWidth = 3
-          ..color = Sky.star,
+          ..color = Palette.white,
       );
     }
-    canvas.drawPath(diamondPath(c, 11), Paint()..color = accent);
+    canvas.drawCircle(c, 14, Paint()..color = accent);
   }
 
   @override
@@ -589,27 +606,27 @@ class _ProblemView extends StatelessWidget {
               SizedBox(
                 width: 40,
                 height: 40,
-                child: CustomPaint(painter: _DiamondMark(Sky.planet.withValues(alpha: 0.85))),
+                child: CustomPaint(painter: _CircleMark(Palette.peachRed.withValues(alpha: 0.85))),
               ),
               const SizedBox(height: 24),
               Text(
                 problem.title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Sky.star, fontSize: 22, fontWeight: FontWeight.w300),
+                style: const TextStyle(color: Palette.white, fontSize: 22, fontWeight: FontWeight.w300),
               ),
               const SizedBox(height: 12),
               Text(
                 problem.body,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Sky.dust, fontSize: 14, height: 1.4),
+                style: const TextStyle(color: Palette.warmGray, fontSize: 14, height: 1.4),
               ),
               if (problem.action != null) ...[
                 const SizedBox(height: 28),
                 OutlinedButton(
                   onPressed: problem.onAction,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Sky.star,
-                    side: BorderSide(color: Sky.star.withValues(alpha: 0.3)),
+                    foregroundColor: Palette.white,
+                    side: BorderSide(color: Palette.white.withValues(alpha: 0.3)),
                   ),
                   child: Text(problem.action!),
                 ),
@@ -622,17 +639,15 @@ class _ProblemView extends StatelessWidget {
   }
 }
 
-class _DiamondMark extends CustomPainter {
-  const _DiamondMark(this.color);
+class _CircleMark extends CustomPainter {
+  const _CircleMark(this.color);
 
   final Color color;
 
   @override
-  void paint(Canvas canvas, Size size) => canvas.drawPath(
-        diamondPath(size.center(Offset.zero), size.height / 2),
-        Paint()..color = color,
-      );
+  void paint(Canvas canvas, Size size) =>
+      canvas.drawCircle(size.center(Offset.zero), size.height / 2, Paint()..color = color);
 
   @override
-  bool shouldRepaint(_DiamondMark old) => old.color != color;
+  bool shouldRepaint(_CircleMark old) => old.color != color;
 }

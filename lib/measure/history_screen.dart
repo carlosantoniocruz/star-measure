@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../common/caption.dart';
-import '../common/diamond.dart';
 import '../theme.dart';
 import 'recording.dart';
 import 'recording_sheet.dart';
@@ -43,18 +42,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF12141C),
-        title: Text(title, style: const TextStyle(color: Sky.star, fontSize: 18, fontWeight: FontWeight.w400)),
-        content: const Text("This can't be undone.", style: TextStyle(color: Sky.dust)),
+        backgroundColor: Palette.darkTyrianBlue,
+        title: Text(title, style: const TextStyle(color: Palette.white, fontSize: 18, fontWeight: FontWeight.w400)),
+        content: const Text("This can't be undone.", style: TextStyle(color: Palette.warmGray)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            style: TextButton.styleFrom(foregroundColor: Sky.dust),
+            style: TextButton.styleFrom(foregroundColor: Palette.warmGray),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Sky.alert),
+            style: TextButton.styleFrom(foregroundColor: Palette.white),
             child: Text(action),
           ),
         ],
@@ -86,7 +85,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Future<void> _open(Recording r) {
     return showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Sky.space,
+      backgroundColor: Palette.darkTyrianBlue,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (sheetContext) => RecordingSheet(
@@ -110,7 +109,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         if (!didPop) _exitSelecting();
       },
       child: Scaffold(
-        backgroundColor: Sky.space,
+        backgroundColor: Palette.darkTyrianBlue,
         appBar: _buildAppBar(),
         body: ListenableBuilder(
           listenable: widget.store,
@@ -123,7 +122,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   child: Text(
                     'No measurements yet.\nPlace two or more points, then hold the diamond to save.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Sky.dust, fontSize: 14, height: 1.5),
+                    style: TextStyle(color: Palette.warmGray, fontSize: 14, height: 1.5),
                   ),
                 ),
               );
@@ -131,7 +130,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
             return ListView.separated(
               padding: const EdgeInsets.only(bottom: 24),
               itemCount: items.length,
-              separatorBuilder: (_, _) => Divider(height: 1, indent: 72, color: Sky.star.withValues(alpha: 0.08)),
+              separatorBuilder: (_, _) =>
+                  Divider(height: 1, indent: 72, color: Palette.white.withValues(alpha: 0.08)),
               itemBuilder: (context, i) => _row(items[i]),
             );
           },
@@ -142,9 +142,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: Sky.space,
+      backgroundColor: Palette.darkTyrianBlue,
       surfaceTintColor: Colors.transparent,
-      foregroundColor: Sky.star,
+      foregroundColor: Palette.white,
       elevation: 0,
       centerTitle: true,
       leading: _selecting
@@ -160,7 +160,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
       title: _selecting
           ? Text('${_selected.length} selected', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400))
-          : const Caption('HISTORY', color: Sky.star),
+          : const Caption('HISTORY', color: Palette.white),
       actions: [
         ListenableBuilder(
           listenable: widget.store,
@@ -181,7 +181,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   IconButton(
                     tooltip: 'Delete selected',
                     icon: const Icon(Icons.delete_outline_rounded),
-                    color: Sky.alert,
+                    color: Palette.peachRed,
                     onPressed: _selected.isEmpty ? null : _deleteSelected,
                   ),
                 ],
@@ -190,7 +190,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             return PopupMenuButton<String>(
               tooltip: 'More',
               enabled: items.isNotEmpty,
-              color: const Color(0xFF12141C),
+              color: Palette.darkTyrianBlue,
               onSelected: (v) => v == 'select' ? _enterSelecting() : _deleteAll(),
               itemBuilder: (_) => const [
                 PopupMenuItem(value: 'select', child: Text('Select')),
@@ -208,27 +208,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return ListTile(
       key: ValueKey(r.id),
       selected: picked,
-      selectedTileColor: Sky.planet.withValues(alpha: 0.08),
+      selectedTileColor: Palette.olympicBlue.withValues(alpha: 0.12),
       contentPadding: const EdgeInsets.only(left: 16, right: 4),
       leading: SizedBox(
         width: 44,
         height: 44,
-        child: CustomPaint(painter: _ShapeThumb(shapeOutline(r.points), picked ? Sky.planet : Sky.star)),
+        child: CustomPaint(
+          painter: _ShapeThumb(shapeOutline(r.points), picked ? Palette.olympicBlue : Palette.white),
+        ),
       ),
       title: Text(
         formatLength(r.total, widget.units),
-        style: const TextStyle(color: Sky.star, fontSize: 20, fontWeight: FontWeight.w300),
+        style: const TextStyle(color: Palette.white, fontSize: 20, fontWeight: FontWeight.w300),
       ),
       subtitle: Text(
-        '${r.points.length} points · ${formatStamp(r.createdAt)}',
-        style: const TextStyle(color: Sky.dust, fontSize: 12),
+        '${r.points.length} points',
+        style: const TextStyle(color: Palette.warmGray, fontSize: 12),
       ),
       trailing: _selecting
           ? Padding(
               padding: const EdgeInsets.only(right: 12),
               child: Icon(
                 picked ? Icons.check_circle_rounded : Icons.circle_outlined,
-                color: picked ? Sky.planet : Sky.dust,
+                color: picked ? Palette.olympicBlue : Palette.warmGray,
               ),
             )
           : ShareMenuButton(onSelected: (c) => performShareChoice(context, r, widget.units, c)),
@@ -262,7 +264,7 @@ class _ShapeThumb extends CustomPainter {
 
     final dot = Paint()..color = color;
     for (final p in pts) {
-      canvas.drawPath(diamondPath(p, 2.6), dot);
+      canvas.drawCircle(p, 2.6, dot);
     }
   }
 

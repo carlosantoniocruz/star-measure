@@ -1,4 +1,4 @@
-import 'package:ar_measure/measure/units.dart';
+import 'package:showdist/measure/units.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -9,8 +9,11 @@ void main() {
   });
 
   group('imperial', () {
-    test('under a foot is inches', () => expect(formatLength(0.1016, UnitSystem.imperial), '4.0 in'));
-    test('over a foot is feet and inches', () => expect(formatLength(1.0, UnitSystem.imperial), '3′ 3″'));
+    test('under a foot is inches', () => expect(formatLength(0.1016, UnitSystem.imperial), '4″'));
+    test('over a foot is feet and inches, to the nearest half inch',
+        () => expect(formatLength(1.0, UnitSystem.imperial), '3′ 3 1/2″'));
     test('exact feet', () => expect(formatLength(0.3048, UnitSystem.imperial), '1′ 0″'));
+    test('rounds to the nearest half inch, not finer',
+        () => expect(formatLength(1.409955, UnitSystem.imperial), '4′ 7 1/2″'));
   });
 }
