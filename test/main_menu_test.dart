@@ -12,21 +12,21 @@ Future<AppSettings> settings() async {
 }
 
 void main() {
-  testWidgets('shows Measurement and Level tiles', (tester) async {
+  testWidgets('shows Measure and Leveler tiles', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      theme: buildTheme(Brightness.dark),
+      theme: buildTheme(),
       home: MainMenuScreen(settings: await settings()),
     ));
-    expect(find.text('MEASUREMENT'), findsOneWidget);
-    expect(find.text('LEVEL'), findsOneWidget);
+    expect(find.text('MEASURE'), findsOneWidget);
+    expect(find.text('LEVELER'), findsOneWidget);
   });
 
-  testWidgets('Level opens the bubble level, reading level before any tilt', (tester) async {
+  testWidgets('Leveler opens the bubble level, reading level before any tilt', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      theme: buildTheme(Brightness.dark),
+      theme: buildTheme(),
       home: MainMenuScreen(settings: await settings()),
     ));
-    await tester.tap(find.text('LEVEL'));
+    await tester.tap(find.text('LEVELER'));
     await tester.pumpAndSettle();
     expect(find.byType(LevelScreen), findsOneWidget);
     // No sensor events have arrived (unmocked in tests), so tilt stays at
@@ -36,12 +36,12 @@ void main() {
 
   testWidgets('the gear icon opens Settings', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      theme: buildTheme(Brightness.dark),
+      theme: buildTheme(),
       home: MainMenuScreen(settings: await settings()),
     ));
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
-    expect(find.text('THEME'), findsOneWidget);
     expect(find.text('UNITS'), findsOneWidget);
+    expect(find.text('About'), findsOneWidget);
   });
 }

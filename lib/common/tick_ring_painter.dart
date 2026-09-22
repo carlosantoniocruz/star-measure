@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// The app icon: a black field, a Neon ring (the brand pink), and black tick
-/// marks notched across it at regular intervals, like a gauge dial. No
+/// The app icon: a darkTyrianBlue field, a peachRed ring, and darkTyrianBlue
+/// tick marks notched across it at regular intervals, like a gauge dial. No
 /// lettering.
 ///
 /// Sized so the ring's outer edge sits at [outerFraction] of the canvas's
@@ -31,7 +31,7 @@ class TickRingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (paintBackground) {
-      canvas.drawRect(Offset.zero & size, Paint()..color = Hue.black);
+      canvas.drawRect(Offset.zero & size, Paint()..color = Palette.darkTyrianBlue);
     }
 
     final c = size.center(Offset.zero);
@@ -46,15 +46,15 @@ class TickRingPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = ringWidth
-        ..color = Hue.neon,
+        ..color = Palette.peachRed,
     );
 
-    // Black ticks notch across the ring, alternating longer (major) and
-    // shorter (minor) — the pink/black alternation the ring reads as.
+    // darkTyrianBlue ticks notch across the ring, alternating longer (major)
+    // and shorter (minor) — the same alternation as the background.
     final tickPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.butt
-      ..color = Hue.black;
+      ..color = Palette.darkTyrianBlue;
     for (var i = 0; i < tickCount; i++) {
       final angle = 2 * math.pi * i / tickCount;
       final isMajor = i % majorEvery == 0;
@@ -63,8 +63,8 @@ class TickRingPainter extends CustomPainter {
       canvas.drawLine(c + dir * (inner - 1), c + dir * (outer + 1), tickPaint);
     }
 
-    // A solid centre, echoing the AR reticle's dot.
-    canvas.drawCircle(c, inner * 0.34, Paint()..color = Hue.neon);
+    // A solid centre, echoing the ring's own colour.
+    canvas.drawCircle(c, inner * 0.34, Paint()..color = Palette.peachRed);
   }
 
   @override

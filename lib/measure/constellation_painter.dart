@@ -7,13 +7,19 @@ import '../theme.dart';
 import 'ar_frame.dart';
 import 'units.dart';
 
-/// Overlay color for every camera-drawn measurement: same neon in both
-/// themes, since it sits on the live camera feed, not the app's own chrome.
-const _overlay = Hue.neon;
+/// Confirmed measurements — placed points, the lines between them, and their
+/// labels — are peachRed ("actions: ... placed points"), fixed regardless of
+/// theme since this sits on the live camera feed, not the app's own chrome.
+const _placed = Palette.peachRed;
 
-/// A slight dark shadow under the overlay graphics and text, so the neon
-/// reads against any real-world background.
-const _shadowColor = Color(0x99000000);
+/// The reticle and the dashed line reaching for it are seaGreen
+/// ("live/tracking elements: reticle dots, ..."), distinguishing what's still
+/// live from what's already placed.
+const _tracking = Palette.seaGreen;
+
+/// A slight dark shadow under the overlay graphics and text, so they read
+/// against any real-world background.
+const _shadowColor = Color(0xB312354E); // darkTyrianBlue at ~70% alpha
 const _shadowOffset = Offset(0, 1.2);
 const _shadowBlur = 1.4;
 
@@ -51,7 +57,7 @@ class ConstellationPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.3
       ..strokeCap = StrokeCap.round
-      ..color = _overlay;
+      ..color = _placed;
 
     final labels = <_Label>[];
     for (var i = 1; i < pts.length; i++) {
@@ -64,13 +70,18 @@ class ConstellationPainter extends CustomPainter {
 
     // Dashed line from the last point to wherever the reticle is aiming.
     final reticle = f.reticle;
+    final trackingLine = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.3
+      ..strokeCap = StrokeCap.round
+      ..color = _tracking;
     if (reticle != null && pts.isNotEmpty && pts.last.visible) {
       final a = px(pts.last), b = px(reticle);
-      _dashed(canvas, a, b, line);
+      _dashed(canvas, a, b, trackingLine);
       labels.add(_Label((a + b) / 2, formatLength(pts.last.distanceTo(reticle), units), live: true));
     }
 
-    final marker = Paint()..color = _overlay;
+    final marker = Paint()..color = _placed;
     for (final p in pts) {
       if (p.visible) _drawShadowedCircle(canvas, px(p), 6, marker);
     }
@@ -94,12 +105,12 @@ class ConstellationPainter extends CustomPainter {
     final paint = Paint()
       ..style = hit ? PaintingStyle.fill : PaintingStyle.stroke
       ..strokeWidth = 1.2
-      ..color = _overlay.withValues(alpha: hit ? 1 : 0.5);
+      ..color = _tracking.withValues(alpha: hit ? 1 : 0.5);
     for (var k = 0; k < 4; k++) {
       final p = c + Offset.fromDirection(t * 0.4 + k * math.pi / 2, ringRadius);
       _drawShadowedCircle(canvas, p, 4.5, paint);
     }
-    _drawShadowedCircle(canvas, c, 1.8, Paint()..color = Colors.white.withValues(alpha: hit ? 0.95 : 0.5));
+    _drawShadowedCircle(canvas, c, 1.8, Paint()..color = Palette.white.withValues(alpha: hit ? 0.95 : 0.5));
   }
 
   void _dashed(Canvas canvas, Offset a, Offset b, Paint paint) {
@@ -125,11 +136,14 @@ class ConstellationPainter extends CustomPainter {
     final tp = TextPainter(
       text: TextSpan(
         text: label.text,
-        style: const TextStyle(
-          color: _overlay,
+        style: TextStyle(
+          // The live label's number changes as the reticle moves; white
+          // keeps it reading clearly as "still live", apart from the
+          // confirmed (peachRed) segment labels next to it.
+          color: label.live ? Palette.white : _placed,
           fontSize: 12.5,
           fontWeight: FontWeight.w500,
-          fontFeatures: [...showdistFontFeatures, FontFeature.tabularFigures()],
+          fontFeatures: const [...showdistFontFeatures, FontFeature.tabularFigures()],
           shadows: _labelShadow,
         ),
       ),
@@ -142,14 +156,14 @@ class ConstellationPainter extends CustomPainter {
     final rect = Rect.fromCenter(center: Offset(cx, cy), width: w, height: h);
     final rrect = RRect.fromRectAndRadius(rect, Radius.circular(h / 2));
 
-    canvas.drawRRect(rrect, Paint()..color = const Color(0xB3000000));
+    canvas.drawRRect(rrect, Paint()..color = _shadowColor);
     if (label.live) {
       canvas.drawRRect(
         rrect,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1
-          ..color = _overlay.withValues(alpha: 0.8),
+          ..color = _tracking.withValues(alpha: 0.8),
       );
     }
     tp.paint(canvas, rect.topLeft + const Offset(8, 4));

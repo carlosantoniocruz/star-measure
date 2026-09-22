@@ -17,7 +17,7 @@ Recording rec(String id, double metres, int minute) => Recording(
 Future<RecordingStore> pumpHistory(WidgetTester tester, {List<Recording>? items}) async {
   final store = RecordingStore.inMemory(items ?? [rec('c', 3, 30), rec('b', 2, 20), rec('a', 1, 10)]);
   await tester.pumpWidget(MaterialApp(
-    theme: buildTheme(Brightness.dark),
+    theme: buildTheme(),
     home: Builder(
       builder: (context) => Scaffold(
         body: Center(

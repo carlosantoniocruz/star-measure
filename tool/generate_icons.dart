@@ -80,7 +80,7 @@ void main() {
 
     File('$_res/values/ic_launcher_background.xml').writeAsStringSync('''<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">${_hex(Hue.black)}</color>
+    <color name="ic_launcher_background">${_hex(Palette.darkTyrianBlue)}</color>
 </resources>
 ''');
   });

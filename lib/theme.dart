@@ -1,16 +1,38 @@
 import 'package:flutter/material.dart';
 
-/// The raw Showdist palette. Prefer [Palette] (theme-aware) in UI code —
-/// these are the source hues it's built from, plus [Hue.neon], which is used
-/// directly for the camera overlay in both themes. [neon] is the exact brand
-/// color; the rest are lighter/darker shades of the same hue and saturation.
-abstract final class Hue {
-  static const neon = Color(0xFFE30B5D);
-  static const bright = Color(0xFFF64689);
-  static const burnt = Color(0xFF9C0840);
-  static const deep = Color(0xFF610528);
-  static const ink = Color(0xFF111111);
-  static const black = Color(0xFF000000);
+/// Showdist's fixed, app-wide colour palette — drawn from Sanzo Wada's
+/// *A Dictionary of Color Combinations*. There is no light/dark variant: the
+/// app always looks the same, regardless of the system theme setting. Every
+/// screen is built from these eight colours only.
+///
+/// Roles (see call sites for exact usage):
+/// - [darkTyrianBlue] — main background (landing, settings, licences).
+/// - [olympicBlue] — secondary accents (selection/toggle state).
+/// - [lightMauve] — the wordmark and large headings.
+/// - [darkCitrine] — small decorative details (ruler ticks, the app icon).
+/// - [peachRed] — actions: the capture button, placed measurement points.
+/// - [seaGreen] — live/tracking elements: reticle dots, the leveler liquid.
+/// - [warmGray] — the leveler's background, and muted/secondary text.
+/// - [white] — body text, live numbers, the reticle's centre dot.
+///
+/// Every text pairing actually used in the app clears WCAG's 4.5:1 for
+/// normal text: white on [darkTyrianBlue] is 12.8:1, [warmGray] on
+/// [darkTyrianBlue] is 5.0:1, and [darkTyrianBlue] on [warmGray] (the
+/// leveler's own text) is 5.0:1. The saturated accents ([olympicBlue],
+/// [lightMauve], [darkCitrine], [peachRed]) sit closer to 3.2-3.8:1 against
+/// [darkTyrianBlue] — enough for icons, strokes, and large text (which is
+/// all they're ever used for; small running text always stays white or
+/// warmGray). [seaGreen] is the one accent strong enough for small text too,
+/// at 4.9:1.
+abstract final class Palette {
+  static const darkTyrianBlue = Color(0xFF12354E);
+  static const olympicBlue = Color(0xFF5A82B3);
+  static const lightMauve = Color(0xFF9A72AA);
+  static const darkCitrine = Color(0xFF8B835B);
+  static const peachRed = Color(0xFFF15A30);
+  static const seaGreen = Color(0xFF00B49B);
+  static const warmGray = Color(0xFFA1A39A);
+  static const white = Colors.white;
 }
 
 /// JetBrains Mono, bundled under `assets/fonts/` (OFL-1.1 licensed — see
@@ -22,175 +44,27 @@ const showdistFontFamily = 'JetBrains Mono';
 /// 0/O and 1/l/I stay unmistakable. Applied to every text style in the app.
 const showdistFontFeatures = [FontFeature.slashedZero()];
 
-/// Theme-aware colors, reached via `Palette.of(context)`. Every text/background
-/// combination used here is checked against WCAG 4.5:1:
-///   Dark:  white on Black                    21:1    Neon on Black      4.47:1
-///   Light: #262626 on #9E9E9E (background)   5.7:1   white on #616161  6.2:1
-///          white on #757575 (card)           4.6:1
-/// Neon (the brand pink, `#E30B5D`) on Black is a hair under the formal 4.5:1
-/// AA line — close enough that it's used as-is for the two small dark-theme
-/// text spots that use it (the unit toggle's "on" label, the history badge
-/// count); everywhere else it's decorative (icons, graphics, the camera
-/// overlay), which only needs 3:1.
-/// A medium grey background (#9E9E9E) is close to the worst case for text
-/// contrast against both black and white, which is why Light's numbers have
-/// less headroom than Dark's — and why `emphasis` (Deep, a dark, muted
-/// version of the brand pink) only clears 3:1 there, enough for icons/
-/// graphics but not body text, so nothing in the app sets emphasis as a text
-/// color in Light.
-/// (Secondary/"muted" tones are solid colors, not opacity, so they can't drift
-/// below the ratio a themed screen was checked at; on Light's bar/card,
-/// white has so little headroom to begin with that "muted" is just white
-/// again — de-emphasis there comes from size/weight only.)
-@immutable
-class Palette extends ThemeExtension<Palette> {
-  const Palette({
-    required this.background,
-    required this.bar,
-    required this.card,
-    required this.onBase,
-    required this.onBaseMuted,
-    required this.onSurface,
-    required this.onSurfaceMuted,
-    required this.emphasis,
-    required this.alertIcon,
-    required this.alertOnCard,
-  });
-
-  /// Main scaffold / camera backdrop.
-  final Color background;
-
-  /// App bar / header strip.
-  final Color bar;
-
-  /// Sheets, dialogs, popup menus.
-  final Color card;
-
-  /// Primary text/icon on [background].
-  final Color onBase;
-
-  /// Secondary text/icon on [background] (still 4.5:1 solid, not alpha).
-  final Color onBaseMuted;
-
-  /// Primary text/icon on [bar] or [card].
-  final Color onSurface;
-
-  /// Secondary text/icon on [bar] or [card].
-  final Color onSurfaceMuted;
-
-  /// Accent for active/selected/lit state, drawn on [background]. Neon on the
-  /// dark theme's black; Deep (a darker, muted version of the same pink) on
-  /// the light theme's grey, since Neon itself has too little contrast
-  /// against a light background to use as a text/icon color there.
-  final Color emphasis;
-
-  /// Destructive-action icon tint on [background] (decorative; text stays
-  /// [onBase]/[onSurface] so it's never a fresh color to re-check).
-  final Color alertIcon;
-
-  /// Destructive-action tint on [card] (e.g. a delete confirmation's button).
-  final Color alertOnCard;
-
-  static const dark = Palette(
-    background: Hue.black,
-    bar: Hue.black,
-    card: Color(0xFF12141C),
-    onBase: Colors.white,
-    onBaseMuted: Color(0xFFB8B8B8),
-    onSurface: Colors.white,
-    onSurfaceMuted: Color(0xFFB8B8B8),
-    emphasis: Hue.neon,
-    alertIcon: Color(0xFFFF6B57),
-    alertOnCard: Color(0xFFFF6B57),
-  );
-
-  // A calmer light theme: medium grey rather than a colored field, dark
-  // grey text (not harsh pure black), and Deep — a darker, muted version of
-  // the brand pink — standing in for the accent, since Neon has almost no
-  // contrast against a light background of any kind.
-  static const light = Palette(
-    background: Color(0xFF9E9E9E),
-    bar: Color(0xFF616161),
-    card: Color(0xFF757575),
-    onBase: Color(0xFF262626),
-    onBaseMuted: Color(0xFF333333),
-    onSurface: Colors.white,
-    onSurfaceMuted: Colors.white,
-    emphasis: Hue.deep,
-    alertIcon: Color(0xFFB3261E),
-    alertOnCard: Colors.white,
-  );
-
-  static Palette of(BuildContext context) => Theme.of(context).extension<Palette>()!;
-
-  @override
-  Palette copyWith({
-    Color? background,
-    Color? bar,
-    Color? card,
-    Color? onBase,
-    Color? onBaseMuted,
-    Color? onSurface,
-    Color? onSurfaceMuted,
-    Color? emphasis,
-    Color? alertIcon,
-    Color? alertOnCard,
-  }) {
-    return Palette(
-      background: background ?? this.background,
-      bar: bar ?? this.bar,
-      card: card ?? this.card,
-      onBase: onBase ?? this.onBase,
-      onBaseMuted: onBaseMuted ?? this.onBaseMuted,
-      onSurface: onSurface ?? this.onSurface,
-      onSurfaceMuted: onSurfaceMuted ?? this.onSurfaceMuted,
-      emphasis: emphasis ?? this.emphasis,
-      alertIcon: alertIcon ?? this.alertIcon,
-      alertOnCard: alertOnCard ?? this.alertOnCard,
-    );
-  }
-
-  @override
-  Palette lerp(ThemeExtension<Palette>? other, double t) {
-    if (other is! Palette) return this;
-    return Palette(
-      background: Color.lerp(background, other.background, t)!,
-      bar: Color.lerp(bar, other.bar, t)!,
-      card: Color.lerp(card, other.card, t)!,
-      onBase: Color.lerp(onBase, other.onBase, t)!,
-      onBaseMuted: Color.lerp(onBaseMuted, other.onBaseMuted, t)!,
-      onSurface: Color.lerp(onSurface, other.onSurface, t)!,
-      onSurfaceMuted: Color.lerp(onSurfaceMuted, other.onSurfaceMuted, t)!,
-      emphasis: Color.lerp(emphasis, other.emphasis, t)!,
-      alertIcon: Color.lerp(alertIcon, other.alertIcon, t)!,
-      alertOnCard: Color.lerp(alertOnCard, other.alertOnCard, t)!,
-    );
-  }
-}
-
-/// Builds the light or dark [ThemeData], with JetBrains Mono (and its slashed
-/// zero) applied to every text-theme role so it reaches plain `TextStyle`s
-/// that don't set their own `fontFamily`/`fontFeatures` (see [TextStyle.merge]).
-ThemeData buildTheme(Brightness brightness) {
-  final palette = brightness == Brightness.dark ? Palette.dark : Palette.light;
+/// Builds the app's one fixed [ThemeData], with JetBrains Mono (and its
+/// slashed zero) applied to every text-theme role so it reaches plain
+/// `TextStyle`s that don't set their own `fontFamily`/`fontFeatures` (see
+/// [TextStyle.merge]).
+ThemeData buildTheme() {
   final scheme = ColorScheme.fromSeed(
-    seedColor: Hue.neon,
-    brightness: brightness,
-  ).copyWith(surface: palette.card, primary: palette.emphasis);
+    seedColor: Palette.peachRed,
+    brightness: Brightness.dark,
+  ).copyWith(surface: Palette.darkTyrianBlue, primary: Palette.peachRed);
 
-  final baseTextTheme = (brightness == Brightness.dark ? Typography.whiteMountainView : Typography.blackMountainView)
-      .apply(fontFamily: showdistFontFamily);
+  final baseTextTheme = Typography.whiteMountainView.apply(fontFamily: showdistFontFamily);
   final textTheme = _withFontFeatures(baseTextTheme);
 
   return ThemeData(
     useMaterial3: true,
-    brightness: brightness,
+    brightness: Brightness.dark,
     colorScheme: scheme,
-    scaffoldBackgroundColor: palette.background,
+    scaffoldBackgroundColor: Palette.darkTyrianBlue,
     fontFamily: showdistFontFamily,
     textTheme: textTheme,
     primaryTextTheme: textTheme,
-    extensions: [palette],
   );
 }
 

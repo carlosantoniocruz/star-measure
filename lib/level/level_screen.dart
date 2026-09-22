@@ -63,13 +63,12 @@ class _LevelScreenState extends State<LevelScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = Palette.of(context);
     return Scaffold(
-      backgroundColor: palette.background,
+      backgroundColor: Palette.darkTyrianBlue,
       appBar: AppBar(
-        backgroundColor: palette.bar,
+        backgroundColor: Palette.darkTyrianBlue,
         surfaceTintColor: Colors.transparent,
-        foregroundColor: palette.onSurface,
+        foregroundColor: Palette.white,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
@@ -77,7 +76,7 @@ class _LevelScreenState extends State<LevelScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.maybePop(context),
         ),
-        title: Caption('LEVEL', color: palette.onSurface),
+        title: const Caption('LEVELER', color: Palette.white),
       ),
       body: SafeArea(
         child: ValueListenableBuilder<Offset>(
@@ -87,20 +86,20 @@ class _LevelScreenState extends State<LevelScreen> {
             final level = degrees <= _levelThresholdDeg;
             return Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(32, 20, 32, 0),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(32, 20, 32, 0),
                   child: Caption(
                     'HOLD FLAT AGAINST THE WALL',
                     size: 11,
                     spacing: 2,
-                    color: palette.onBaseMuted,
+                    color: Palette.warmGray,
                   ),
                 ),
                 Expanded(
                   child: Center(
                     child: CustomPaint(
                       size: const Size(260, 260),
-                      painter: _BubblePainter(tilt: tilt, level: level, palette: palette),
+                      painter: _BubblePainter(tilt: tilt, level: level),
                     ),
                   ),
                 ),
@@ -109,10 +108,9 @@ class _LevelScreenState extends State<LevelScreen> {
                   child: Text(
                     '${degrees.toStringAsFixed(1)}°',
                     style: TextStyle(
-                      // Text always uses onBase — emphasis isn't guaranteed
-                      // to meet text contrast in every theme (see theme.dart);
-                      // "level" is already signalled by the ring lighting up.
-                      color: palette.onBase,
+                      // Always white — "level" is already signalled by the
+                      // vial lighting up seaGreen, not by this text's colour.
+                      color: Palette.white,
                       fontSize: 40,
                       fontWeight: FontWeight.w200,
                       fontFeatures: [...showdistFontFeatures, const FontFeature.tabularFigures()],
@@ -129,28 +127,31 @@ class _LevelScreenState extends State<LevelScreen> {
 }
 
 class _BubblePainter extends CustomPainter {
-  const _BubblePainter({required this.tilt, required this.level, required this.palette});
+  const _BubblePainter({required this.tilt, required this.level});
 
   final Offset tilt;
   final bool level;
-  final Palette palette;
 
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final radius = size.shortestSide / 2 - 4;
 
+    // The vial's own background — warmGray, per the palette's "leveler
+    // background" role — with the ring and bubble (the "liquid") on top.
+    canvas.drawCircle(c, radius, Paint()..color = Palette.warmGray.withValues(alpha: 0.25));
+
     final ring = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
-      ..color = palette.onBase.withValues(alpha: 0.35);
+      ..color = Palette.white.withValues(alpha: 0.35);
     canvas.drawCircle(c, radius, ring);
-    canvas.drawCircle(c, 1.5, Paint()..color = palette.onBase.withValues(alpha: 0.35));
+    canvas.drawCircle(c, 1.5, Paint()..color = Palette.white.withValues(alpha: 0.35));
 
     // Bubble offset from centre, clamped to the ring.
     final raw = Offset(tilt.dx, -tilt.dy) * radius;
     final bubble = raw.distance > radius ? raw * (radius / raw.distance) : raw;
-    final accent = level ? palette.emphasis : palette.onBase;
+    final accent = level ? Palette.seaGreen : Palette.white;
 
     canvas.drawCircle(c + bubble, level ? 12 : 9, Paint()..color = accent);
     if (level) {
@@ -160,12 +161,11 @@ class _BubblePainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.5
-          ..color = palette.emphasis,
+          ..color = Palette.seaGreen,
       );
     }
   }
 
   @override
-  bool shouldRepaint(_BubblePainter old) =>
-      old.tilt != tilt || old.level != level || old.palette != palette;
+  bool shouldRepaint(_BubblePainter old) => old.tilt != tilt || old.level != level;
 }

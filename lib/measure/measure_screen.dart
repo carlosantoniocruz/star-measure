@@ -20,12 +20,6 @@ import 'recording_sheet.dart';
 import 'recording_store.dart';
 import 'units.dart';
 
-/// The measuring screen is camera-dominated real-world imagery, not the
-/// app's own chrome, so its colors stay fixed regardless of the Light/Dark
-/// setting — an icon that's white on black shouldn't flip to dark-on-light
-/// over a scene that hasn't changed at all.
-const _palette = Palette.dark;
-
 class MeasureScreen extends StatefulWidget {
   const MeasureScreen({super.key, required this.settings});
 
@@ -203,7 +197,7 @@ class _MeasureScreenState extends State<MeasureScreen>
   Future<void> _showSaved(Recording r) {
     return showModalBottomSheet<void>(
       context: context,
-      backgroundColor: _palette.card,
+      backgroundColor: Palette.darkTyrianBlue,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (sheetContext) => RecordingSheet(
@@ -230,12 +224,12 @@ class _MeasureScreenState extends State<MeasureScreen>
   Widget build(BuildContext context) {
     final problem = _problem;
     return Scaffold(
-      backgroundColor: _palette.background,
+      backgroundColor: Palette.darkTyrianBlue,
       body: problem != null
           ? _ProblemView(problem: problem)
           : _running
               ? _buildAr()
-              : Center(child: Caption('WAKING THE CAMERA', color: _palette.onBaseMuted)),
+              : const Center(child: Caption('WAKING THE CAMERA', color: Palette.warmGray)),
     );
   }
 
@@ -256,10 +250,13 @@ class _MeasureScreenState extends State<MeasureScreen>
               const IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
+                    // darkTyrianBlue, faded in from transparent — a scrim so
+                    // the white/peachRed/seaGreen overlay reads against any
+                    // real-world background, without resorting to plain black.
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Color(0x99000000), Color(0x00000000), Color(0x00000000), Color(0xAA000000)],
+                      colors: [Color(0x9912354E), Color(0x0012354E), Color(0x0012354E), Color(0xAA12354E)],
                       stops: [0, 0.18, 0.72, 1],
                     ),
                   ),
@@ -279,13 +276,13 @@ class _MeasureScreenState extends State<MeasureScreen>
                         valueListenable: _frame,
                         builder: (context, f, _) => Column(
                           children: [
-                            _Hint(text: _hint(f), color: _palette.onBase),
+                            _Hint(text: _hint(f), color: Palette.white),
                             if (f.points.length >= 2) ...[
                               const SizedBox(height: 6),
                               Text(
                                 formatLength(f.totalLength, units),
                                 style: TextStyle(
-                                  color: _palette.onBase,
+                                  color: Palette.white,
                                   fontSize: 34,
                                   fontWeight: FontWeight.w200,
                                   fontFeatures: [...showdistFontFeatures, const FontFeature.tabularFigures()],
@@ -314,14 +311,12 @@ class _MeasureScreenState extends State<MeasureScreen>
                                         tooltip: 'History',
                                         badge: _store?.items.length ?? 0,
                                         onTap: _store == null ? null : _showHistory,
-                                        palette: _palette,
                                       ),
                                     ),
                                     _IconAction(
                                       icon: Icons.undo_rounded,
                                       tooltip: 'Undo last point',
                                       onTap: hasPoints ? ArChannel.undo : null,
-                                      palette: _palette,
                                     ),
                                   ],
                                 ),
@@ -332,7 +327,6 @@ class _MeasureScreenState extends State<MeasureScreen>
                                   enabled: f.reticle != null,
                                   charge: _charge.value,
                                   onAdd: _addPoint,
-                                  palette: _palette,
                                 ),
                               ),
                               Expanded(
@@ -343,12 +337,10 @@ class _MeasureScreenState extends State<MeasureScreen>
                                       icon: Icons.close_rounded,
                                       tooltip: 'Clear all points',
                                       onTap: hasPoints ? ArChannel.clear : null,
-                                      palette: _palette,
                                     ),
                                     _UnitToggle(
                                       value: units,
                                       onChanged: widget.settings.setUnits,
-                                      palette: _palette,
                                     ),
                                   ],
                                 ),
@@ -437,7 +429,7 @@ class _Hint extends StatelessWidget {
           color: color.withValues(alpha: 0.85),
           fontSize: 13,
           letterSpacing: 0.3,
-          shadows: const [Shadow(blurRadius: 6, color: Color(0xAA000000))],
+          shadows: const [Shadow(blurRadius: 6, color: Color(0xAA12354E))], // darkTyrianBlue
         ),
       ),
     );
@@ -445,11 +437,10 @@ class _Hint extends StatelessWidget {
 }
 
 class _UnitToggle extends StatelessWidget {
-  const _UnitToggle({required this.value, required this.onChanged, required this.palette});
+  const _UnitToggle({required this.value, required this.onChanged});
 
   final UnitSystem value;
   final ValueChanged<UnitSystem> onChanged;
-  final Palette palette;
 
   @override
   Widget build(BuildContext context) {
@@ -463,7 +454,9 @@ class _UnitToggle extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: on ? palette.emphasis : palette.onBase.withValues(alpha: 0.5),
+              // Weight and opacity carry the on/off state, not colour — small
+              // text stays white so it always clears contrast on the camera feed.
+              color: on ? Palette.white : Palette.white.withValues(alpha: 0.5),
               fontSize: 12,
               fontWeight: on ? FontWeight.w700 : FontWeight.w500,
               letterSpacing: 1.5,
@@ -486,14 +479,12 @@ class _IconAction extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
-    required this.palette,
     this.badge = 0,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback? onTap;
-  final Palette palette;
   final int badge;
 
   @override
@@ -510,14 +501,14 @@ class _IconAction extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Icon(icon, color: palette.onBase.withValues(alpha: enabled ? 0.9 : 0.3), size: 24),
+              Icon(icon, color: Palette.white.withValues(alpha: enabled ? 0.9 : 0.3), size: 24),
               if (badge > 0)
                 Positioned(
                   right: 4,
                   top: 6,
                   child: Text(
                     '$badge',
-                    style: TextStyle(color: palette.emphasis, fontSize: 11, fontWeight: FontWeight.w700),
+                    style: const TextStyle(color: Palette.white, fontSize: 11, fontWeight: FontWeight.w700),
                   ),
                 ),
             ],
@@ -532,12 +523,11 @@ class _IconAction extends StatelessWidget {
 /// a surface). [charge] (0 to 1, driven by holding anywhere on screen) fills
 /// the ring; reaching 1 saves the measurement.
 class _AddButton extends StatelessWidget {
-  const _AddButton({required this.enabled, required this.charge, required this.onAdd, required this.palette});
+  const _AddButton({required this.enabled, required this.charge, required this.onAdd});
 
   final bool enabled;
   final double charge;
   final VoidCallback onAdd;
-  final Palette palette;
 
   @override
   Widget build(BuildContext context) {
@@ -550,7 +540,7 @@ class _AddButton extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         child: CustomPaint(
           size: const Size(96, 96),
-          painter: _AddButtonPainter(lit: enabled, charge: charge, palette: palette),
+          painter: _AddButtonPainter(lit: enabled, charge: charge),
         ),
       ),
     );
@@ -558,17 +548,18 @@ class _AddButton extends StatelessWidget {
 }
 
 class _AddButtonPainter extends CustomPainter {
-  const _AddButtonPainter({required this.lit, required this.charge, required this.palette});
+  const _AddButtonPainter({required this.lit, required this.charge});
 
   final bool lit;
   final double charge;
-  final Palette palette;
 
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final radius = size.width / 2 - 2;
-    final accent = lit ? palette.emphasis : palette.onBase.withValues(alpha: 0.35);
+    // peachRed — "actions: the capture button" — once the reticle is on a
+    // surface; a dim white ring otherwise.
+    final accent = lit ? Palette.peachRed : Palette.white.withValues(alpha: 0.35);
 
     canvas.drawCircle(
       c,
@@ -588,15 +579,14 @@ class _AddButtonPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeWidth = 3
-          ..color = palette.onBase,
+          ..color = Palette.white,
       );
     }
     canvas.drawCircle(c, 14, Paint()..color = accent);
   }
 
   @override
-  bool shouldRepaint(_AddButtonPainter old) =>
-      old.lit != lit || old.charge != charge || old.palette != palette;
+  bool shouldRepaint(_AddButtonPainter old) => old.lit != lit || old.charge != charge;
 }
 
 class _ProblemView extends StatelessWidget {
@@ -616,27 +606,27 @@ class _ProblemView extends StatelessWidget {
               SizedBox(
                 width: 40,
                 height: 40,
-                child: CustomPaint(painter: _CircleMark(_palette.emphasis.withValues(alpha: 0.85))),
+                child: CustomPaint(painter: _CircleMark(Palette.peachRed.withValues(alpha: 0.85))),
               ),
               const SizedBox(height: 24),
               Text(
                 problem.title,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _palette.onBase, fontSize: 22, fontWeight: FontWeight.w300),
+                style: const TextStyle(color: Palette.white, fontSize: 22, fontWeight: FontWeight.w300),
               ),
               const SizedBox(height: 12),
               Text(
                 problem.body,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _palette.onBaseMuted, fontSize: 14, height: 1.4),
+                style: const TextStyle(color: Palette.warmGray, fontSize: 14, height: 1.4),
               ),
               if (problem.action != null) ...[
                 const SizedBox(height: 28),
                 OutlinedButton(
                   onPressed: problem.onAction,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: _palette.onBase,
-                    side: BorderSide(color: _palette.onBase.withValues(alpha: 0.3)),
+                    foregroundColor: Palette.white,
+                    side: BorderSide(color: Palette.white.withValues(alpha: 0.3)),
                   ),
                   child: Text(problem.action!),
                 ),

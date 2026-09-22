@@ -43,9 +43,7 @@ class ShowdistApp extends StatelessWidget {
       builder: (context, _) => MaterialApp(
         title: 'Showdist',
         debugShowCheckedModeBanner: false,
-        theme: buildTheme(Brightness.light),
-        darkTheme: buildTheme(Brightness.dark),
-        themeMode: settings.themeMode,
+        theme: buildTheme(),
         home: MainMenuScreen(settings: settings),
       ),
     );

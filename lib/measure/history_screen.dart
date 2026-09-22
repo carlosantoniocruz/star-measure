@@ -39,22 +39,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
       });
 
   Future<bool> _confirm({required String title, required String action}) async {
-    final palette = Palette.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: palette.card,
-        title: Text(title, style: TextStyle(color: palette.onSurface, fontSize: 18, fontWeight: FontWeight.w400)),
-        content: Text("This can't be undone.", style: TextStyle(color: palette.onSurfaceMuted)),
+        backgroundColor: Palette.darkTyrianBlue,
+        title: Text(title, style: const TextStyle(color: Palette.white, fontSize: 18, fontWeight: FontWeight.w400)),
+        content: const Text("This can't be undone.", style: TextStyle(color: Palette.warmGray)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            style: TextButton.styleFrom(foregroundColor: palette.onSurfaceMuted),
+            style: TextButton.styleFrom(foregroundColor: Palette.warmGray),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: palette.alertOnCard),
+            style: TextButton.styleFrom(foregroundColor: Palette.white),
             child: Text(action),
           ),
         ],
@@ -84,10 +83,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _open(Recording r) {
-    final palette = Palette.of(context);
     return showModalBottomSheet<void>(
       context: context,
-      backgroundColor: palette.card,
+      backgroundColor: Palette.darkTyrianBlue,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (sheetContext) => RecordingSheet(
@@ -104,7 +102,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = Palette.of(context);
     return PopScope(
       // Back leaves selection mode first, like most Android lists.
       canPop: !_selecting,
@@ -112,20 +109,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
         if (!didPop) _exitSelecting();
       },
       child: Scaffold(
-        backgroundColor: palette.background,
-        appBar: _buildAppBar(palette),
+        backgroundColor: Palette.darkTyrianBlue,
+        appBar: _buildAppBar(),
         body: ListenableBuilder(
           listenable: widget.store,
           builder: (context, _) {
             final items = widget.store.items;
             if (items.isEmpty) {
-              return Center(
+              return const Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  padding: EdgeInsets.symmetric(horizontal: 40),
                   child: Text(
                     'No measurements yet.\nPlace two or more points, then hold the diamond to save.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: palette.onBaseMuted, fontSize: 14, height: 1.5),
+                    style: TextStyle(color: Palette.warmGray, fontSize: 14, height: 1.5),
                   ),
                 ),
               );
@@ -134,8 +131,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
               padding: const EdgeInsets.only(bottom: 24),
               itemCount: items.length,
               separatorBuilder: (_, _) =>
-                  Divider(height: 1, indent: 72, color: palette.onBase.withValues(alpha: 0.08)),
-              itemBuilder: (context, i) => _row(items[i], palette),
+                  Divider(height: 1, indent: 72, color: Palette.white.withValues(alpha: 0.08)),
+              itemBuilder: (context, i) => _row(items[i]),
             );
           },
         ),
@@ -143,11 +140,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(Palette palette) {
+  PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: palette.bar,
+      backgroundColor: Palette.darkTyrianBlue,
       surfaceTintColor: Colors.transparent,
-      foregroundColor: palette.onSurface,
+      foregroundColor: Palette.white,
       elevation: 0,
       centerTitle: true,
       leading: _selecting
@@ -163,7 +160,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
       title: _selecting
           ? Text('${_selected.length} selected', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400))
-          : Caption('HISTORY', color: palette.onSurface),
+          : const Caption('HISTORY', color: Palette.white),
       actions: [
         ListenableBuilder(
           listenable: widget.store,
@@ -184,7 +181,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   IconButton(
                     tooltip: 'Delete selected',
                     icon: const Icon(Icons.delete_outline_rounded),
-                    color: palette.alertIcon,
+                    color: Palette.peachRed,
                     onPressed: _selected.isEmpty ? null : _deleteSelected,
                   ),
                 ],
@@ -193,7 +190,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             return PopupMenuButton<String>(
               tooltip: 'More',
               enabled: items.isNotEmpty,
-              color: palette.card,
+              color: Palette.darkTyrianBlue,
               onSelected: (v) => v == 'select' ? _enterSelecting() : _deleteAll(),
               itemBuilder: (_) => const [
                 PopupMenuItem(value: 'select', child: Text('Select')),
@@ -206,34 +203,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _row(Recording r, Palette palette) {
+  Widget _row(Recording r) {
     final picked = _selected.contains(r.id);
     return ListTile(
       key: ValueKey(r.id),
       selected: picked,
-      selectedTileColor: palette.emphasis.withValues(alpha: 0.08),
+      selectedTileColor: Palette.olympicBlue.withValues(alpha: 0.12),
       contentPadding: const EdgeInsets.only(left: 16, right: 4),
       leading: SizedBox(
         width: 44,
         height: 44,
         child: CustomPaint(
-          painter: _ShapeThumb(shapeOutline(r.points), picked ? palette.emphasis : palette.onBase),
+          painter: _ShapeThumb(shapeOutline(r.points), picked ? Palette.olympicBlue : Palette.white),
         ),
       ),
       title: Text(
         formatLength(r.total, widget.units),
-        style: TextStyle(color: palette.onBase, fontSize: 20, fontWeight: FontWeight.w300),
+        style: const TextStyle(color: Palette.white, fontSize: 20, fontWeight: FontWeight.w300),
       ),
       subtitle: Text(
         '${r.points.length} points',
-        style: TextStyle(color: palette.onBaseMuted, fontSize: 12),
+        style: const TextStyle(color: Palette.warmGray, fontSize: 12),
       ),
       trailing: _selecting
           ? Padding(
               padding: const EdgeInsets.only(right: 12),
               child: Icon(
                 picked ? Icons.check_circle_rounded : Icons.circle_outlined,
-                color: picked ? palette.emphasis : palette.onBaseMuted,
+                color: picked ? Palette.olympicBlue : Palette.warmGray,
               ),
             )
           : ShareMenuButton(onSelected: (c) => performShareChoice(context, r, widget.units, c)),

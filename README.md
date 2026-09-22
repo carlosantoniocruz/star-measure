@@ -7,22 +7,23 @@ Point the camera at a surface, tap to drop points, and read off the distances.
 Measurements can be saved on the device, browsed in a history, and shared as
 a plain-text file through the Android share sheet, or copied as text.
 
-The look is a vivid pink (`#E30B5D`) on black in Dark, and a medium grey with
-a darker, muted version of the same pink in Light: hairline measuring lines,
-small dots for points and the reticle, and a background of drifting tick
-marks. It is an independent project and is not affiliated with Google or
-Android.
+The look is one fixed dark-navy theme, drawn from Sanzo Wada's *A Dictionary
+of Color Combinations* — no light/dark switching, no system-theme following:
+hairline measuring lines in peachRed, a seaGreen aiming reticle, small dots
+for points, and static ruler tick marks along the bottom edge. It is an
+independent project and is not affiliated with Google or Android.
 
 ## Using it
 
-The app opens straight to a **main menu**: just the words **MEASUREMENT**
-and **LEVEL** over a background of drifting ruler tick marks, the Showdist
-wordmark at the bottom, and Settings one tap away, top right. No icons, no
-containers around either.
+The app opens straight to a **main menu**: the SHOWDIST wordmark at the top,
+then two tools — **Measure** and **Leveler** — as large bordered cards,
+Measure the more prominent of the two. Static ruler tick marks run along the
+bottom edge. About and Settings are one tap away, top-left and top-right.
 
-**Measuring.** This screen's colors are fixed (the same in Light and Dark) —
-it's the live camera feed, not the app's own chrome, so it has no reason to
-follow the system theme.
+The AR session doesn't start until you actually tap Measure — opening the
+main menu never touches the camera.
+
+**Measuring.** Like every screen, this one uses the app's one fixed theme.
 
 1. Allow camera access. If the phone lacks Google Play Services for AR, the app
    offers to install it.
@@ -58,19 +59,17 @@ readout below is the tilt in degrees.
 
 ## Settings
 
-Reached from the gear icon on the main menu. Both choices are saved on device
-and restored on the next launch:
+Reached from the gear icon on the main menu.
 
-- **Theme** — System (default), Light, or Dark. Dark is black with the brand
-  pink as its accent; Light is a medium grey (`#9E9E9E`) with a darker-grey
-  bar and card and a deep, muted version of the same pink as its accent —
-  Neon itself doesn't have enough contrast against a mid-grey background to
-  use as text.
 - **Units** — Imperial (default: feet and inches, e.g. `4′ 7 1/2″`) or
-  Metric. The same setting drives the in-AR M/FT toggle.
+  Metric, saved on device and restored on the next launch. The same setting
+  drives the in-AR M/FT toggle.
 
-**About**, one tap further in, shows the app name, version, and a licenses
-page (Flutter, ARCore, and the bundled JetBrains Mono font).
+**About**, also reached from the settings screen, shows the app name,
+version, a quick-start guide for each tool, a developer section, a licenses
+page (Flutter, ARCore, and the bundled JetBrains Mono font), and a contact
+email (selectable, to copy). It's also reachable directly from the main
+menu's info icon, top-left.
 
 ## Saving and exporting
 
@@ -169,12 +168,14 @@ Kotlin (android/app/src/main/kotlin/com/showconfigs/showdist/)
   BackgroundRenderer    camera image as a full-screen OpenGL quad
 
 Dart (lib/)
-  menu/                 the main menu (Measurement / Level / Settings)
+  menu/                 the main menu (Measure / Leveler tool cards, About /
+                        Settings icons, the static ruler ticks)
   measure/              AR screen, constellation painter, units, recordings,
                         storage, sharing, the history screen and detail sheet,
                         and the Settings screen
   level/                the accelerometer-driven bubble level
-  common/               the tick-ring painter, the wordmark painter, Caption
+  common/               the tick-ring painter, Caption
+  about_screen.dart     app info, per-tool quick start, developer section
 tool/generate_icons.dart  renders the launcher icon from the in-app tick ring
 ```
 
@@ -216,8 +217,8 @@ draw above it.
   leaving selection first, opening a row, and Copy text reaching the clipboard
 - the measuring overlay: a distance label is drawn only when its segment's
   midpoint is on-screen, so no labels are stranded on the edges
-- the main menu: both tiles are present, Level opens the bubble level, the
-  gear opens Settings
+- the main menu: both tool cards are present, Leveler opens the bubble
+  level, the gear opens Settings
 
 The native ARCore path (session start, hit testing, anchors, projection) and
 the Level screen's accelerometer reading have no automated tests, because
@@ -239,51 +240,52 @@ both need real hardware. Test them on a device.
   `compileSdk` 37, which the Gradle and AGP setup here could not resolve.
 - `share_plus` is pinned to `^11.0.0`. Version 13 moves to `jni` native-asset
   build hooks, which is a heavier toolchain than a share sheet needs.
-- `shared_preferences` stores the Settings screen's theme and units choices.
+- `shared_preferences` stores the Settings screen's units choice.
 - `sensors_plus` reads the accelerometer for the Level screen.
 
 ## Design
 
-Colours live in `lib/theme.dart` as `Palette`, a `ThemeExtension` reached with
-`Palette.of(context)`, plus the raw hues in `Hue`:
+Showdist uses one fixed theme, app-wide — no light/dark switching, no system
+theme following. Colours live in `lib/theme.dart` as `Palette`, eight named
+constants drawn from Sanzo Wada's *A Dictionary of Color Combinations*:
 
-| | Neon `#E30B5D` | Bright `#F64689` | Burnt `#9C0840` | Deep `#610528` | Ink `#111111` | Black `#000000` |
-| --- | --- | --- | --- | --- | --- | --- |
+| Token | Hex | Role |
+| --- | --- | --- |
+| `darkTyrianBlue` | `#12354E` | Main background — landing, settings, licences |
+| `olympicBlue` | `#5A82B3` | Secondary accents — selection/toggle state |
+| `lightMauve` | `#9A72AA` | The wordmark and large headings |
+| `darkCitrine` | `#8B835B` | Small decorative details — the main menu's ruler ticks |
+| `peachRed` | `#F15A30` | Actions — the capture button, placed measurement points |
+| `seaGreen` | `#00B49B` | Live/tracking elements — reticle dots, the leveler liquid |
+| `warmGray` | `#A1A39A` | The leveler's own background, and muted/secondary text |
+| `white` | `#FFFFFF` | Body text, live numbers, the reticle's centre dot |
 
-Neon is the exact brand color; Bright/Burnt/Deep are lighter/darker shades of
-the same hue and saturation.
+Every screen is built from these eight colours only. Every text pairing the
+app actually uses clears WCAG's 4.5:1 for normal text: white on
+`darkTyrianBlue` is 12.8:1, `warmGray` on `darkTyrianBlue` is 5.0:1, and
+`darkTyrianBlue` on `warmGray` (the leveler's own readout background) is also
+5.0:1. The saturated accents (`olympicBlue`, `lightMauve`, `darkCitrine`,
+`peachRed`) sit at 3.2-3.8:1 against `darkTyrianBlue` — enough for icons,
+strokes, and large text, which is all they're ever used for; small running
+text always stays white or `warmGray`. `seaGreen` is strong enough for small
+text too, at 4.9:1.
 
-- **Dark** (default under System, on an OLED-friendly black): background and
-  bars are Black, text is white, the active/accent colour is Neon.
-- **Light**: a medium grey base (`#9E9E9E`), with a darker grey bar and card
-  (`#616161` / `#757575`, both taking white text) and Deep — a dark, muted
-  version of the brand pink — as the accent. A mid-grey background is close
-  to the worst case for contrast against both black and white text, so
-  Light's numbers have much less headroom than Dark's, and `emphasis` (Deep)
-  only clears 3:1 there — enough for icons and graphics, not for body text,
-  so nothing in the app sets it as a text colour in Light (the Level screen's
-  readout, for one, stays `onBase` even when "level" — the ring lighting up
-  is the signal).
-- **Camera overlay** (`ConstellationPainter`): lines, the four reticle dots,
-  and distance labels are always Neon with a small dark drop shadow,
-  regardless of theme — it sits on the live camera feed, not the app's own
-  chrome. The reticle's centre dot is white, so it stays visible against the
-  dots around it. The whole Measurement screen's chrome, in fact, is fixed
-  to the Dark palette regardless of the Light/Dark setting, for the same
-  reason: it's real-world imagery, not app chrome, so it has no theme to follow.
-
-Every text/background combination the app actually uses was checked against
-WCAG's 4.5:1: in Dark, white on Black (21:1); in Light, `#262626` on the
-background (5.7:1), white on the bar (6.2:1), and white on the card (4.6:1).
-Neon (the brand pink) on Black comes out to 4.47:1 — a hair under the formal
-line — which is used as-is for the two small dark-theme text spots that set
-it (the unit toggle's "on" label, the history badge count); everywhere else
-it's decorative (icons, graphics, the camera overlay), which only needs 3:1.
-Secondary/"muted" text is a second solid colour, not the primary colour at
-reduced opacity, so dimming it can't quietly drop it below the ratio a screen
-was checked at — though on Light's bar/card, white already has so little
-headroom that "muted" there is just white again; de-emphasis comes from size
-and weight only.
+- **Camera overlay** (`ConstellationPainter`): confirmed points, the lines
+  between them, and their labels are peachRed. The reticle's four dots and
+  the dashed line reaching for it are seaGreen, distinguishing what's still
+  live from what's already placed; the reticle's centre dot and the live
+  label (the one that changes as the phone moves) are white. A drop shadow
+  under the overlay graphics uses `darkTyrianBlue`, not plain black, so it
+  still reads as part of the app's own palette against any real-world
+  background.
+- **The leveler**: the vial behind the bubble is `warmGray` — the palette's
+  "leveler background" — and the bubble itself is seaGreen once plumb
+  ("leveler liquid"), white otherwise.
+- **Selection state** (History's picked rows, the Settings radio buttons)
+  uses `olympicBlue`. Small running text never takes a colour accent — the
+  unit toggle's on/off state and the history badge count are told apart by
+  weight and opacity, not colour, since none of the accents clear 4.5:1 at
+  small sizes.
 
 Text is set in **JetBrains Mono** (bundled under `assets/fonts/`, OFL-1.1
 licensed — see `assets/fonts/JetBrainsMono/OFL.txt`), the only font in the
@@ -293,15 +295,16 @@ unmistakable.
 
 Small filled circles — not diamonds — mark measuring points, the reticle, the
 main button, and the level's bubble. The **app icon** (and the About screen's
-badge, `lib/common/tick_ring_painter.dart`) has no lettering at all: a black
-field, a Neon ring, and black tick marks notched across it at regular
-intervals, like a gauge dial.
-The **Showdist wordmark** ("SHOW" over "DIST", `lib/common/wordmark_painter.dart`)
-appears bare — no background, coloured from the theme — at the bottom of the
-main menu, whose background is otherwise a large, continuously drifting ruler
-edge: a baseline with tick marks hanging from it, like a tape measure, in the
-accent colour. Both painters size themselves to fit whichever context they're
-rendered into.
+badge, `lib/common/tick_ring_painter.dart`) has no lettering at all:
+a `darkTyrianBlue` field, a `peachRed` ring, and `darkTyrianBlue` tick marks
+notched across it at regular intervals, like a gauge dial.
+The **SHOWDIST wordmark** — one word, all caps, `lightMauve` — sits at the
+top of the main menu. Below it, **Measure** and **Leveler** are large
+bordered cards (`peachRed` and `olympicBlue` respectively), Measure the
+larger and more strongly tinted of the two, each filling its share of the
+remaining space rather than leaving it empty. Static ruler tick marks —
+`darkCitrine`, no animation — run along the very bottom edge, pointing
+upward, like a tape measure's edge.
 
 ## License
 

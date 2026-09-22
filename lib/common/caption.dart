@@ -14,12 +14,11 @@ class Caption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = Palette.of(context);
     return Text(
       text,
       textAlign: TextAlign.center,
       style: TextStyle(
-        color: color ?? palette.onBaseMuted,
+        color: color ?? Palette.warmGray,
         fontSize: size,
         fontWeight: FontWeight.w600,
         letterSpacing: spacing,
